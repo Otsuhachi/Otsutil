@@ -1,5 +1,7 @@
 import base64
 import pickle
+import tkinter
+import tkinter.filedialog
 from pathlib import Path
 
 
@@ -107,6 +109,58 @@ def write_set_lines(list_, file):
     text = "\n".join(set_list)
     with open(file, 'w') as f:
         f.write(text)
+
+
+def choice_file(multi=False, *, strict=True):
+    """ファイルを選択するダイアログを表示し、選択されたファイルのPathオブジェクトまたはPathオブジェクトのリストを返します。
+
+    Args:
+        multi (bool, optional): Trueにすると、複数ファイルを選択可能になります。初期値はFalse。
+        strict (bool, optional): Falseにすると、選択がキャンセルされた場合にNoneを返します。
+
+    Raises:
+        NotSelectedError: `strict=True`かつ、選択がキャンセルされた場合。
+
+    Returns:
+        Pathlib.Path or list[pathlib.Path] or None: 選択したファイルのパスです。
+    """
+    root = tkinter.Tk()
+    root.withdraw()
+    file_type = [("", "*")]
+    script_dir = Path()
+    option = {'filetypes': file_type, 'initialdir': script_dir}
+    if multi:
+        file = [Path(x) for x in tkinter.filedialog.askopenfilenames(**option)]
+    else:
+        file = Path(tkinter.filedialog.askopenfilename(**option))
+    if file in (Path(), []):
+        if strict:
+            err = f'{file=}'
+            raise NotSelectedError(err)
+        return None
+    return file
+
+
+def choice_dir():
+    """ディレクトリを選択するダイアログを表示し、選択されたディレクトリのPathオブジェクトを返します。
+
+    キャンセルされた場合、スクリプトのディレクトリが返ります。
+
+    Returns:
+        pathlib.Path: ディレクトリパス。
+    """
+    root = tkinter.Tk()
+    root.withdraw()
+    script_dir = Path()
+    option = {'initialdir': script_dir}
+    dir = tkinter.filedialog.askdirectory(**option)
+    return Path(dir)
+
+
+class NotSelectedError(Exception):
+    """ファイル、または、フォルダ選択ダイアログでキャンセルされた場合に投げられます。
+    """
+    pass
 
 
 if __name__ == '__main__':
