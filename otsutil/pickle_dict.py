@@ -1,2 +1,1 @@
-def test():
-    print(__name__)
+print('Sorry, this module is now developing')
