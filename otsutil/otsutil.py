@@ -3,6 +3,7 @@ import pickle
 import tkinter
 import tkinter.filedialog
 from pathlib import Path
+from otsutil.exceptions import NotSelectedError
 
 
 def create_system_name(name):
@@ -155,12 +156,6 @@ def choice_dir():
     option = {'initialdir': script_dir}
     dir = tkinter.filedialog.askdirectory(**option)
     return Path(dir)
-
-
-class NotSelectedError(Exception):
-    """ファイル、または、フォルダ選択ダイアログでキャンセルされた場合に投げられます。
-    """
-    pass
 
 
 if __name__ == '__main__':
