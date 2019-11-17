@@ -1,8 +1,13 @@
+if __name__ == '__main__':
+    print("This module is not main script.")
+    exit()
+
 import base64
 import pickle
 import tkinter
 import tkinter.filedialog
 from pathlib import Path
+
 from otsutil.exceptions import NotSelectedError
 
 
@@ -48,7 +53,7 @@ def load_object(file):
     """外部ファイルから暗号化されたオブジェクトを読み込みます。
 
     Args:
-        file (str or pathlib.Path): 外部ファイル。
+        file (str or Path): 外部ファイル。
 
     Raises:
         FileNotFoundError: 指定した外部ファイルが存在しない場合に投げられます。
@@ -70,7 +75,7 @@ def save_object(obj, file, protocol=4):
 
     Args:
         obj (object): オブジェクト。
-        file (str or pathlib.Path): 外部ファイル。
+        file (str or Path): 外部ファイル。
         protocol (int, optional): pickleのprotocol。`1-5`まで選択可能。 指定しなければ `4`。
     """
     file = Path(file)
@@ -92,7 +97,7 @@ def write_set_lines(list_, file):
 
     Args:
         list_ (list): リスト。
-        file (str or pathlib.Path): 外部ファイル。
+        file (str or Path): 外部ファイル。
     """
     file = Path(file)
     tmp = []
@@ -100,11 +105,10 @@ def write_set_lines(list_, file):
         return
     if file.exists():
         with open(file, 'r') as f:
-            for line in f:
-                tmp.append(line.strip())
+            tmp += [y for x in f if (y:=x.strip())]
     else:
         file.parent.mkdir(parents=True, exist_ok=True)
-    tmp += [str(x) for x in list_]
+    tmp += [y for x in list_ if (y:=str(x).strip())]
     set_list = list(set(tmp))
     set_list.sort(key=tmp.index)
     text = "\n".join(set_list)
@@ -112,10 +116,11 @@ def write_set_lines(list_, file):
         f.write(text)
 
 
-def choice_file(multi=False, *, strict=True):
-    """ファイルを選択するダイアログを表示し、選択されたファイルのPathオブジェクトまたはPathオブジェクトのリストを返します。
+def choice_file(*types, title=None, multi=False, strict=True):
+    """ファイルを選択するダイアログを表示し、選択されたファイルのPathオブジェクト、または、list[Path]オブジェクトを返します。
 
     Args:
+        title (str, optional): 設定するとダイアログのタイトルになります。
         multi (bool, optional): Trueにすると、複数ファイルを選択可能になります。初期値はFalse。
         strict (bool, optional): Falseにすると、選択がキャンセルされた場合にNoneを返します。
 
@@ -123,13 +128,18 @@ def choice_file(multi=False, *, strict=True):
         NotSelectedError: `strict=True`かつ、選択がキャンセルされた場合。
 
     Returns:
-        Pathlib.Path or list[pathlib.Path] or None: 選択したファイルのパスです。
+        Path or list[Path] or None: 選択したファイルのパスです。
     """
     root = tkinter.Tk()
     root.withdraw()
-    file_type = [("", "*")]
+    if types:
+        file_type = [(f'{x}ファイル', f'*.{x}') for x in types if x]
+    else:
+        file_type = [("", "*")]
     script_dir = Path()
     option = {'filetypes': file_type, 'initialdir': script_dir}
+    if title is not None:
+        option['title'] = title
     if multi:
         file = [Path(x) for x in tkinter.filedialog.askopenfilenames(**option)]
     else:
@@ -142,21 +152,21 @@ def choice_file(multi=False, *, strict=True):
     return file
 
 
-def choice_dir():
+def choice_dir(title=None):
     """ディレクトリを選択するダイアログを表示し、選択されたディレクトリのPathオブジェクトを返します。
 
-    キャンセルされた場合、スクリプトのディレクトリが返ります。
+    Args:
+        title (str, optional): 設定するとダイアログのタイトルになります。
 
     Returns:
-        pathlib.Path: ディレクトリパス。
+        Path: ディレクトリパス。
     """
+    option = {}
+    if title is not None:
+        option['title'] = title
     root = tkinter.Tk()
     root.withdraw()
     script_dir = Path()
-    option = {'initialdir': script_dir}
+    option['initialdir'] = script_dir
     dir = tkinter.filedialog.askdirectory(**option)
     return Path(dir)
-
-
-if __name__ == '__main__':
-    print('This script is not main.')
