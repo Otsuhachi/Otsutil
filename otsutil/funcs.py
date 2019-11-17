@@ -1,7 +1,3 @@
-if __name__ == '__main__':
-    print("This module is not main script.")
-    exit()
-
 import base64
 import pickle
 import tkinter
