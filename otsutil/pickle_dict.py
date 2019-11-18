@@ -15,7 +15,10 @@ class PDict:
         return self
 
     def __exit__(self, *ex):
-        self.update()
+        self.close()
+
+    def __len__(self):
+        return len(self.keys)
 
     def __init__(self, file, *, reset_data=False):
         """オブジェクト管理の準備行います。
@@ -50,6 +53,27 @@ class PDict:
             value (object): オブジェクト。
         """
         self.rewrite(key, value)
+
+    def __delitem__(self, item):
+        """キーの要素を削除します。
+
+        Args:
+            item (str): キー。
+        """
+        self.remove(item)
+
+    def __iter__(self):
+        self.__n = self.get_keys()
+        return self
+
+    def __next__(self):
+        if self.__n:
+            return self.__n.pop(0)
+        else:
+            raise StopIteration
+
+    def __contains__(self, key):
+        return self.has_key(key)
 
     def _setup(self, file, reset_data):
         """初期化処理を行います。
@@ -107,16 +131,16 @@ class PDict:
         except Exception:
             print("ファイルの読み込みに失敗しました。")
             keys = []
-        self.update()
+        self._maintain()
 
-    def update(self):
-        """管理ファイルの更新を行います。
+    def _maintain(self):
+        """管理ファイルの保守を行います。
         """
         tmp = self.base_dir / 'tmp.tmp'
         with open(tmp, 'wb') as f:
             for dict_ in self._generate_reader():
                 for key in dict_:
-                    if self.exists(key):
+                    if self.has_key(key):
                         pickle.dump(dict_, f)
         with open(tmp, 'rb') as tf, open(self.file, 'wb') as file:
             file.write(tf.read())
@@ -150,7 +174,7 @@ class PDict:
 
         """
         for key in kargs:
-            if self.exists(key):
+            if self.has_key(key):
                 err = (
                     f"[{key=}]の追加に失敗しました。",
                     "既に存在するキーです。",
@@ -177,7 +201,7 @@ class PDict:
             value (object): 書き換え後の値。
             allow_add (bool, optional): 追加を許可するか。 Falseにすると存在しないキーをrewriteしても何も起こりません。
         """
-        if self.exists(key) or allow_add:
+        if self.has_key(key) or allow_add:
             self.remove(key)
             data = {key: value}
             self.add(**data)
@@ -190,10 +214,10 @@ class PDict:
         Args:
             key (str): キー。
         """
-        if self.exists(key):
+        if self.has_key(key):
             index = self.keys.index(key)
             del self.keys[index]
-            self.update()
+            self._maintain()
 
     def load(self, key, *, strict=True):
         """指定したキーの値を返します。
@@ -208,7 +232,7 @@ class PDict:
         Returns:
             object: オブジェクト。
         """
-        if self.exists(key):
+        if self.has_key(key):
             for dict_ in self._generate_reader():
                 if key in dict_:
                     return dict_[key]
@@ -240,7 +264,7 @@ class PDict:
         elif len(keys) != len(set(keys)):
             err = f"同じキーを重複して指定することはできません。"
         elif strict:
-            if not all([self.exists(x) for x in keys]):
+            if not all([self.has_key(x) for x in keys]):
                 err = f"[{keys=}]の中に存在しないキーが含まれています。"
         if err is not None:
             raise ValueError(err)
@@ -252,7 +276,7 @@ class PDict:
                     objects[index] = dict_[key]
         return tuple(x[1] for x in sorted(objects.items(), key=lambda x: x[0]))
 
-    def exists(self, key):
+    def has_key(self, key):
         """キーが存在するか確認します。
 
         Args:
@@ -263,11 +287,20 @@ class PDict:
         """
         return key in self.keys
 
-    def show_keys(self):
-        """現在管理しているキーの一覧を出力します。
+    def values(self):
+        """保存しているオブジェクトの値一覧を返します。
+
+        このメソッドはメモリを圧迫する可能性があるので推奨されません。
+
+        Returns:
+            list: 値一覧。
         """
-        for key in sorted(self.keys):
-            print(key)
+        tmp = {}
+        for dict_ in self._generate_reader():
+            for key in dict_:
+                tmp[key] = dict_[key]
+        tmp = sorted(tmp.items(), key=lambda x: x[0])
+        return [x[1] for x in tmp]
 
     def show_all(self):
         """現在管理しているキーと値の一覧を出力します。
@@ -278,6 +311,21 @@ class PDict:
                 outputs.append(f'{key}: {dict_[key]}')
         for line in sorted(outputs):
             print(line)
+
+    def get_keys(self):
+        """キーの一覧を取得します。
+
+        Returns:
+            list: キー一覧。
+        """
+        return [x for x in self.keys]
+
+    def close(self):
+        """管理ファイルを保守します。
+
+        with文から抜けるときに自動で呼び出されます。
+        """
+        self._maintain()
 
     @property
     def file(self):
@@ -304,4 +352,5 @@ class PDict:
         Returns:
             list: キー群。
         """
+        self.__keys.sort()
         return self.__keys
