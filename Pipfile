@@ -8,7 +8,6 @@ yapf = "*"
 flake8 = "*"
 
 [packages]
-otsutil = {path = "."}
 
 [requires]
 python_version = "3.8"

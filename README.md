@@ -1,8 +1,10 @@
 # otsutil
 
 よく使う自作関数、クラスを纏めたパッケージです。
+
 発生したトラブル等に当方は一切責任を負いません。
-仕様は自己責任でお願いします。
+
+使用は自己責任でお願いします。
 
 ## 目次
 
@@ -25,6 +27,7 @@
       - [外部ファイルからオブジェクトを読み込む](#外部ファイルからオブジェクトを読み込む)
       - [外部ファイルにオブジェクトを保存する](#外部ファイルにオブジェクトを保存する)
       - [リスト等から重複を取り除いて 1 行ずつ外部ファイルに書き出す](#リスト等から重複を取り除いて-1-行ずつ外部ファイルに書き出す)
+      - [質問を行い真偽値の回答を取得する](#質問を行い真偽値の回答を取得する)
   - [pickle_dict](#pickle_dict)
     - [概要](#概要-1)
     - [使い方](#使い方)
@@ -51,53 +54,43 @@
 
 ### pip
 
-<details open><summary>インストール</summary>
+インストール
 
 ```Console
 pip install git+https://github.com/Otsuhachi/otsutil#egg=otsutil
 ```
 
-</details>
-
-<details open><summary>更新</summary>
+更新
 
 ```Console
 pip install git+https://github.com/Otsuhachi/otsutil#egg=otsutil -U
 ```
 
-</details>
-
-<details><summary>アンインストール</summary>
+アンインストール
 
 ```Console
 pip uninstall otsutil
 ```
 
-</details>
-
 ### pipenv
 
-<details open><summary>インストール</summary>
+インストール
 
 ```Console
 pipenv install git+https://github.com/Otsuhachi/otsutil#egg=otsutil
 ```
 
-</details>
-<details open><summary>更新</summary>
+更新
 
 ```Console
 pipenv update otsutil
 ```
 
-</details>
-<details><summary>アンインストール</summary>
+アンインストール
 
 ```Console
 pipenv uninstall otsutil
 ```
-
-</details>
 
 # モジュール
 
@@ -111,21 +104,18 @@ pipenv uninstall otsutil
 
 #### フォルダ選択ダイアログから Path オブジェクトを取得
 
-<details>
+`choice_dir(title=None)`
 
-`choice_dir(title=None)`<br>
-ディレクトリ選択ダイアログを表示し、選択されたディレクトリの`Path`を返します。<br>
+ディレクトリ選択ダイアログを表示し、選択されたディレクトリの`Path`を返します。
+
 ディレクトリが選択されなかった場合、呼び出し元オブジェクトの`Path`返ります。
 
 - title: ダイアログのタイトルです。
 
-</details>
-
 #### ファイル選択ダイアログから Path オブジェクトを取得
 
-<details>
+`choice_file(*types, title=None, multi=False, strict=True)`
 
-`choice_file(*types, title=None, multi=False, strict=True)`<br>
 ファイル選択ダイアログを表示し、選択されたファイルの`Path`を返します。
 
 - types(str): 拡張子でフィルターを掛けることができます。
@@ -138,62 +128,73 @@ pipenv uninstall otsutil
 - strict(bool): ファイルの選択がキャンセルされたとき、`NotSelectedError`を投げます。
   `False`にすると、例外を投げる代わりに`None`を返すようになります。
 
-</details>
-
 #### ファイルやフォルダの名前に使用できる文字列に変換
 
-<details>
+`create_system_name(name)`
 
-`create_system_name(name)`<br>
 ファイル名、及びフォルダ名に使用できない文字を使用可能な文字に置き換えた文字列を返します。
 
 - name(str): ファイル名、フォルダ名に使用したい文字列です。
 
-</details>
-
 #### 外部ファイルからオブジェクトを読み込む
 
-<details>
-
 `load_object(file)`<br>
-外部ファイルからオブジェクトを読み込みます。<br>
-この関数は[save_object](#%e5%a4%96%e9%83%a8%e3%83%95%e3%82%a1%e3%82%a4%e3%83%ab%e3%81%ab%e3%82%aa%e3%83%96%e3%82%b8%e3%82%a7%e3%82%af%e3%83%88%e3%82%92%e4%bf%9d%e5%ad%98%e3%81%99%e3%82%8b)で保存したオブジェクトの読み込みを想定しています。<br><br>
-ファイルに保存されているオブジェクトは`単一`である必要があります。<br>
+外部ファイルからオブジェクトを読み込みます。
+
+この関数は[save_object](#%e5%a4%96%e9%83%a8%e3%83%95%e3%82%a1%e3%82%a4%e3%83%ab%e3%81%ab%e3%82%aa%e3%83%96%e3%82%b8%e3%82%a7%e3%82%af%e3%83%88%e3%82%92%e4%bf%9d%e5%ad%98%e3%81%99%e3%82%8b)で保存したオブジェクトの読み込みを想定しています。<br>
+
+ファイルに保存されているオブジェクトは`単一`である必要があります。
+
 複数のオブジェクトを扱いたい場合は、[pickle_dict](#pickle_dict)を使用してください。
 
 - file(str or Path): 読み込むファイルです。
 
-</details>
-
 #### 外部ファイルにオブジェクトを保存する
 
-<details>
+`save_object(obj, file, protocol=4)`
 
-`save_object(obj, file, protocol=4)`<br>
-オブジェクトを外部ファイルに保存します。<br>
-`pickle`で保存できないオブジェクトには未対応です。<br>
-読み込みには[load_object](#%e5%a4%96%e9%83%a8%e3%83%95%e3%82%a1%e3%82%a4%e3%83%ab%e3%81%8b%e3%82%89%e3%82%aa%e3%83%96%e3%82%b8%e3%82%a7%e3%82%af%e3%83%88%e3%82%92%e8%aa%ad%e3%81%bf%e8%be%bc%e3%82%80)の使用を想定しています。<br><br>
-この関数で保存されるオブジェクトは`単一`です。<br>
+オブジェクトを外部ファイルに保存します。
+
+`pickle`で保存できないオブジェクトには未対応です。
+
+読み込みには[load_object](#%e5%a4%96%e9%83%a8%e3%83%95%e3%82%a1%e3%82%a4%e3%83%ab%e3%81%8b%e3%82%89%e3%82%aa%e3%83%96%e3%82%b8%e3%82%a7%e3%82%af%e3%83%88%e3%82%92%e8%aa%ad%e3%81%bf%e8%be%bc%e3%82%80)の使用を想定しています。<br>
+
+この関数で保存されるオブジェクトは`単一`です。
+
 複数のオブジェクトを扱いたい場合は、[pickle_dict](#pickle_dict)を使用してください。
 
 - obj(object): 保存したいオブジェクトです。
 - file(str or Path): 書き出し先のファイルです。
 - protocol(int): `pickle`で使用するプロトコルです。
 
-</details>
-
 #### リスト等から重複を取り除いて 1 行ずつ外部ファイルに書き出す
 
-<details>
+`write_set_lines(list_, file)`
 
-`write_set_lines(list_, file)`<br>
-重複の不要なオブジェクト群を外部ファイルに 1 行ずつ書き出します。<br>
+重複の不要なオブジェクト群を外部ファイルに 1 行ずつ書き出します。
+
 フォルダに含まれているファイルの拡張子一覧を書き出したいなど、ユーザーが読むための出力を想定しています。
 
 - list\_(iter): ユーザー向けの出力をしたい iter オブジェクトです。
 - file(str or Path): 出力先ファイルです。
 
-</details>
+#### 質問を行い真偽値の回答を取得する
+
+`confirm(message, use_gui=True, prompt='>')`
+
+`はい`、`いいえ`で答えられるような質問を行ってユーザーからの回答を`bool値`として取得します。<br>
+
+`use_gui`が有効の場合、質問を`tkinter.messagebox.askyesno`で行います。
+
+無効の場合は標準出力で質問を行います。
+
+また、その場合は`[yes, y, はい, ハイ, no, n, いいえ, イイエ]`以外の入力は受け取りません。
+
+※大文字、小文字は区別されません。前後の空白は除去されます。<br>
+
+`prompt`では、標準出力で質問を行う場合のプロンプト文字列を設定できます。
+
+`use_gui=True`の場合、このオプションは関係ありません。
 
 ## pickle_dict
 
@@ -318,7 +319,8 @@ test5: 辞書風に追加
 `remove(key)`
 
 指定したキーを削除します。
-キーを削除したあと管理ファイルの保守処理を呼び出します。
+
+キーを削除したあと管理ファイルの保守処理を呼び出します。<br>
 
 存在しないキーを指定した場合何もしません。
 
@@ -384,6 +386,7 @@ keys=['test2', 'test3', 'test5']
 `values()`
 
 一つのリストに全てのオブジェクトを格納して返すので、メモリを圧迫する可能性があります。
+
 使用は推奨しません。
 
 ```Python
@@ -397,6 +400,7 @@ values=['書き換え', 3.0, '辞書風に追加']
 #### キーの存在確認
 
 キーの存在確認には`has_key`か`in文`が使えます。
+
 内部的には等価です。
 
 ```Python

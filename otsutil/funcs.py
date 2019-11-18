@@ -1,9 +1,9 @@
 import base64
 import pickle
 import tkinter
-import tkinter.filedialog
+from tkinter.filedialog import askdirectory, askopenfilename, askopenfilenames
+from tkinter.messagebox import askyesno
 from pathlib import Path
-
 from otsutil.exceptions import NotSelectedError
 
 
@@ -137,9 +137,9 @@ def choice_file(*types, title=None, multi=False, strict=True):
     if title is not None:
         option['title'] = title
     if multi:
-        file = [Path(x) for x in tkinter.filedialog.askopenfilenames(**option)]
+        file = [Path(x) for x in askopenfilenames(**option)]
     else:
-        file = Path(tkinter.filedialog.askopenfilename(**option))
+        file = Path(askopenfilename(**option))
     if file in (Path(), []):
         if strict:
             err = f'{file=}'
@@ -164,5 +164,32 @@ def choice_dir(title=None):
     root.withdraw()
     script_dir = Path()
     option['initialdir'] = script_dir
-    dir = tkinter.filedialog.askdirectory(**option)
+    dir = askdirectory(**option)
     return Path(dir)
+
+
+def confirm(message, use_gui=True, prompt='>'):
+    """[yes], [no]で回答できる質問を行い、その結果を真偽値にして返します。
+
+    Args:
+        message (str): 質問文です。
+        use_gui (bool, optional): 有効にするとtkinterにようGUIで質問を行い、無効にすると標準出力で質問を行います。
+        prompt (str, optional): 標準出力で質問を行う際のプロンプト文字列です。
+
+    Returns:
+        bool: ユーザーからの回答。
+    """
+    while True:
+        if use_gui:
+            root = tkinter.Tk()
+            root.withdraw()
+            return askyesno('確認', message)
+        else:
+            answer = input(f'{message}{prompt}').strip().lower()
+            if answer in ('yes', 'y', 'はい', 'ハイ'):
+                return True
+            elif answer in ('no', 'n', 'いいえ', 'イイエ'):
+                return
+        print('回答は以下のいずれかを入力してください。')
+        print('yes: yes, y, はい, ハイ')
+        print('no: no, n, いいえ, イイエ')

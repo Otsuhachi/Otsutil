@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "6c19bfc0ba77e34fa1695494c00dd6b950daa9d48bd2ee44ef10f25d956bf92a"
+            "sha256": "dd19b67be0e9141c626ef8400d60eb5731db1ebb72020c1f9a1084e103b34132"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -15,11 +15,7 @@
             }
         ]
     },
-    "default": {
-        "otsutil": {
-            "path": "."
-        }
-    },
+    "default": {},
     "develop": {
         "entrypoints": {
             "hashes": [
