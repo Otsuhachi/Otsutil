@@ -176,7 +176,6 @@ def confirm(message, use_gui=True, prompt='>'):
         use_gui (bool, optional): 有効にするとtkinterにようGUIで質問を行い、無効にすると標準出力で質問を行います。
         prompt (str, optional): 標準出力で質問を行う際のプロンプト文字列です。
 
-
     Returns:
         bool: ユーザーからの回答。
     """
@@ -203,10 +202,12 @@ def type_input(convert_type=str, message="", prompt='>', allow_empty=False):
         message (str, optional): 入力を受け取るときに表示する文字列。 指定しなければ空文字列になります。
         prompt (str, optional): 入力を受け取るときに表示するプロンプト文字列。 指定しなければ"> "です。
         allow_empty (bool, optional): 空文字列を受け取った場合、Noneを返します。 指定しなければFalseです。
+
     Returns:
         pass_type or None: 指定した型、または、None。
     """
-    text = f"{message} ({convert_type}){prompt}".strip()
+    type_str = str(convert_type).split("'")[1]
+    text = f"{message} ({type_str}){prompt}".strip()
     while True:
         receive = input(text).strip()
         if receive == "":
@@ -215,7 +216,38 @@ def type_input(convert_type=str, message="", prompt='>', allow_empty=False):
             else:
                 continue
         try:
-            converted = convert_type(receive)
-            return converted
+            if convert_type is bool:
+                if (converted:=receive.lower()) in ('true', 'false'):
+                    return converted == 'true'
+            else:
+                converted = convert_type(receive)
+                return converted
         except Exception:
             continue
+
+
+def get_dict_in_value(dict_):
+    """引数に与えた辞書オブジェクトから安全に値を取得する為の関数を返します。
+
+    Args:
+        dict_ (dict): 辞書オブジェクト。
+
+    Returns:
+        function: 安全に辞書オブジェクトを読み込む関数。
+    """
+    def _(key):
+        """辞書オブジェクトからキーに対応する値を取得します。
+        この関数は存在しなキーを指定した場合、例外を投げる代わりにNoneを返します。
+
+        Args:
+            key (str): キー。
+
+        Returns:
+            object or None: キーの値。 または、None。
+        """
+        try:
+            return dict_[key]
+        except Exception:
+            return None
+
+    return _

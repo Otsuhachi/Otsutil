@@ -28,6 +28,8 @@
       - [外部ファイルにオブジェクトを保存する](#外部ファイルにオブジェクトを保存する)
       - [リスト等から重複を取り除いて 1 行ずつ外部ファイルに書き出す](#リスト等から重複を取り除いて-1-行ずつ外部ファイルに書き出す)
       - [質問を行い真偽値の回答を取得する](#質問を行い真偽値の回答を取得する)
+      - [入力を受け取り指定した型に変換する](#入力を受け取り指定した型に変換する)
+      - [辞書オブジェクトから例外を起こさずに値を取得する](#辞書オブジェクトから例外を起こさずに値を取得する)
   - [pickle_dict](#pickle_dict)
     - [概要](#概要-1)
     - [使い方](#使い方)
@@ -210,6 +212,51 @@ pipenv uninstall otsutil
 - message(str): ユーザーへの入力を促すメッセージです。
 - prompt(str): ユーザーへの入力を促すメッセージの末尾です。
 - allow_empty(bool): 空文字列を受け取った場合 None を返して終了するかです。
+
+#### 辞書オブジェクトから例外を起こさずに値を取得する
+
+`get_dict_in_value(dict_)`
+
+辞書オブジェクトから例外を起こさずに値を取得する関数です。
+
+初めに引数`dict_`を与えると`dict_`から値を取得するための`_(key)`関数を返します。
+
+この関数は`__getitem__`が定義されているクラスであれば動作する場合があります。
+
+- dict\_(dict): 辞書オブジェクトです。
+- \_(function): 値取得用関数です。
+  - key(str): 取得したいキーです。
+
+使い方
+
+```Python
+# テスト用辞書
+sample_dict = {'test1': 1, 'test2': 'test2', 'test3': 3.0}
+
+# 読み込み用関数の取得
+getter = get_dict_in_value(sample_dict)
+
+# get_dict_in_value(sample_dict)の戻り値の型
+getter_type = type(getter)
+
+# 存在するキーの取得
+get_exists_key = getter('test2')
+
+# 存在しないキーの取得
+get_not_exists_key = getter('test4')
+
+# 変数の内容を出力
+print(f'{sample_dict=}')
+print(f'{getter_type=}')
+print(f'{get_exists_key=}')
+print(f'{get_not_exists_key=}')
+"""
+sample_dict={'test1': 1, 'test2': 'test2', 'test3': 3.0}
+getter_type=<class 'function'>
+get_exists_key='test2'
+get_not_exists_key=None
+"""
+```
 
 ## pickle_dict
 
