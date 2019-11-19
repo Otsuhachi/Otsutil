@@ -176,6 +176,7 @@ def confirm(message, use_gui=True, prompt='>'):
         use_gui (bool, optional): 有効にするとtkinterにようGUIで質問を行い、無効にすると標準出力で質問を行います。
         prompt (str, optional): 標準出力で質問を行う際のプロンプト文字列です。
 
+
     Returns:
         bool: ユーザーからの回答。
     """
@@ -193,3 +194,28 @@ def confirm(message, use_gui=True, prompt='>'):
         print('回答は以下のいずれかを入力してください。')
         print('yes: yes, y, はい, ハイ')
         print('no: no, n, いいえ, イイエ')
+
+
+def type_input(convert_type=str, message="", prompt='>', allow_empty=False):
+    """指定した型に変換可能な文字列を受け取ります。
+    Args:
+        convert_type ([str or int or float or bool], optional): 型。指定しなければ文字列型。
+        message (str, optional): 入力を受け取るときに表示する文字列。 指定しなければ空文字列になります。
+        prompt (str, optional): 入力を受け取るときに表示するプロンプト文字列。 指定しなければ"> "です。
+        allow_empty (bool, optional): 空文字列を受け取った場合、Noneを返します。 指定しなければFalseです。
+    Returns:
+        pass_type or None: 指定した型、または、None。
+    """
+    text = f"{message} ({convert_type}){prompt}".strip()
+    while True:
+        receive = input(text).strip()
+        if receive == "":
+            if allow_empty:
+                return None
+            else:
+                continue
+        try:
+            converted = convert_type(receive)
+            return converted
+        except Exception:
+            continue

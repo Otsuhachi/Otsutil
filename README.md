@@ -196,6 +196,21 @@ pipenv uninstall otsutil
 - use_gui(bool): 質問を GUI で行うか、標準出力で行うかです。
 - prompt (str): 標準出力で質問する時のプロンプト文字列です。
 
+#### 入力を受け取り指定した型に変換する
+
+`type_input(convert_type=str, message="", prompt='>', allow_empty=False)`
+
+ユーザーからの入力を受け取り、指定した型に変換した値を返します。
+
+変換が正常に行われる文字列を受け取るまで、この処理が継続されます。
+
+変換可能な型は、`__call__`で文字列からの変換が定義されているものになります。
+
+- convert_type(type): 変換する型です。
+- message(str): ユーザーへの入力を促すメッセージです。
+- prompt(str): ユーザーへの入力を促すメッセージの末尾です。
+- allow_empty(bool): 空文字列を受け取った場合 None を返して終了するかです。
+
 ## pickle_dict
 
 ### 概要
