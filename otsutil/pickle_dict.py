@@ -176,7 +176,8 @@ class PDict:
         for key in kargs:
             if self.has_key(key):
                 err = (
-                    f"[{key=}]の追加に失敗しました。",
+                    # f"[{key=}]の追加に失敗しました。",  # Python 3.8 only
+                    f"[key={key}]の追加に失敗しました",
                     "既に存在するキーです。",
                     "このキーを上書きしたい場合は、[rewrite]メソッドを使用してください。",
                 )
@@ -187,7 +188,8 @@ class PDict:
                     pickle.dump({key: kargs[key]}, f)
                 self.keys.append(key)
             except Exception as e:
-                err = f"[{key=}]の追加に失敗しました。\n{e}"
+                # err = f"[{key=}]の追加に失敗しました。\n{e}"  # Python 3.8 only
+                err = f"[key={key}]の追加に失敗しました。\n{e}"
                 print(err)
 
     def rewrite(self, key, value, *, allow_add=True):
@@ -236,7 +238,8 @@ class PDict:
             for dict_ in self._generate_reader():
                 if key in dict_:
                     return dict_[key]
-        err = f"[{key=}]の読み込みに失敗しました。"
+        # err = f"[{key=}]の読み込みに失敗しました。"  # Python 3.8 only
+        err = f"[key={key}]の読み込みに失敗しました。"
         if strict:
             raise KeyError(err)
         else:
@@ -265,7 +268,8 @@ class PDict:
             err = f"同じキーを重複して指定することはできません。"
         elif strict:
             if not all([self.has_key(x) for x in keys]):
-                err = f"[{keys=}]の中に存在しないキーが含まれています。"
+                # err = f"[{keys=}]の中に存在しないキーが含まれています。"  # Python 3.8 only
+                err = f"[keys={keys}]の中に存在しないキーが含まれています。"
         if err is not None:
             raise ValueError(err)
         objects = {x: None for x in range(len(keys))}

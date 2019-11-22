@@ -101,10 +101,12 @@ def write_set_lines(list_, file):
         return
     if file.exists():
         with open(file, 'r', encoding='utf8') as f:
-            tmp += [y for x in f if (y:=x.strip())]
+            # tmp += [y for x in f if (y:=x.strip())]  # Python 3.8 only
+            tmp += [x for x in map(lambda x: (str(x).strip()), f)]
     else:
         file.parent.mkdir(parents=True, exist_ok=True)
-    tmp += [y for x in list_ if (y:=str(x).strip())]
+    # tmp += [y for x in list_ if (y:=str(x).strip())]  # Python 3.8 only
+    tmp += [x for x in map(lambda x: str(x).strip(), list_)]
     set_list = list(set(tmp))
     set_list.sort(key=tmp.index)
     text = "\n".join(set_list)
@@ -142,7 +144,8 @@ def choice_file(*types, title=None, multi=False, strict=True):
         file = Path(askopenfilename(**option))
     if file in (Path(), []):
         if strict:
-            err = f'{file=}'
+            # err = f'{file=}'  # Python 3.8 only
+            err = f'file: {file}'
             raise NotSelectedError(err)
         return None
     return file
@@ -217,7 +220,11 @@ def type_input(convert_type=str, message="", prompt='>', allow_empty=False):
                 continue
         try:
             if convert_type is bool:
-                if (converted:=receive.lower()) in ('true', 'false'):
+                # Python 3.8 only
+                # if (converted:=receive.lower()) in ('true', 'false'):
+                #     return converted == 'true'
+                converted = receive.lower()
+                if converted in ('true', 'false'):
                     return converted == 'true'
             else:
                 converted = convert_type(receive)
