@@ -100,7 +100,7 @@ def write_set_lines(list_, file):
     if not list_:
         return
     if file.exists():
-        with open(file, 'r') as f:
+        with open(file, 'r', encoding='utf8') as f:
             tmp += [y for x in f if (y:=x.strip())]
     else:
         file.parent.mkdir(parents=True, exist_ok=True)
@@ -108,7 +108,7 @@ def write_set_lines(list_, file):
     set_list = list(set(tmp))
     set_list.sort(key=tmp.index)
     text = "\n".join(set_list)
-    with open(file, 'w') as f:
+    with open(file, 'w', encoding='utf8') as f:
         f.write(text)
 
 
