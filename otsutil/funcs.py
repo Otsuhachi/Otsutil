@@ -102,11 +102,14 @@ def write_set_lines(list_, file):
     if file.exists():
         with open(file, 'r', encoding='utf8') as f:
             # tmp += [y for x in f if (y:=x.strip())]  # Python 3.8 only
-            tmp += [x for x in map(lambda x: (str(x).strip()), f)]
+            tmp += [x for x in f]
     else:
         file.parent.mkdir(parents=True, exist_ok=True)
     # tmp += [y for x in list_ if (y:=str(x).strip())]  # Python 3.8 only
-    tmp += [x for x in map(lambda x: str(x).strip(), list_)]
+    tmp += [x for x in list_]
+    tmp = [x for x in map(lambda x: str(x).strip(), tmp) if x]
+    if '\ufeff' in tmp:
+        tmp.remove('\ufeff')
     set_list = list(set(tmp))
     set_list.sort(key=tmp.index)
     text = "\n".join(set_list)
