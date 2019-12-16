@@ -133,6 +133,7 @@ def choice_file(*types, title=None, multi=False, strict=True):
     """
     root = tkinter.Tk()
     root.withdraw()
+    root.attributes('-topmost', True)
     root.focus_force()
     if types:
         file_type = [(f'{x}ファイル', f'*.{x}') for x in types if x]
@@ -168,6 +169,7 @@ def choice_dir(title=None):
     if title is not None:
         option['title'] = title
     root = tkinter.Tk()
+    root.attributes('-topmost', True)
     root.focus_force()
     root.withdraw()
     script_dir = Path()
@@ -191,6 +193,7 @@ def confirm(message, use_gui=True, prompt='>'):
         if use_gui:
             root = tkinter.Tk()
             root.withdraw()
+            root.attributes('-topmost', True)
             root.focus_force()
             return askyesno('確認', message)
         else:
