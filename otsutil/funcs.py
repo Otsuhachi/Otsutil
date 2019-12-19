@@ -1,9 +1,12 @@
 import base64
 import pickle
+import sys
 import tkinter
+from pathlib import Path
+from shutil import get_terminal_size
 from tkinter.filedialog import askdirectory, askopenfilename, askopenfilenames
 from tkinter.messagebox import askyesno
-from pathlib import Path
+
 from otsutil.exceptions import NotSelectedError
 
 
@@ -43,6 +46,23 @@ def create_system_name(name):
         old, new = words
         new_name = new_name.replace(old, new)
     return new_name
+
+
+def fline(text='', end=False):
+    """標準出力で改行せずに出力します。
+
+    進捗の表示などで同じ行を使いまわすことができます。
+    textは引数の値を文字列化してから表示されます。
+
+    Args:
+        text (str, optional): 出力する文です。
+        end (bool, optional): 改行を行う場合にTrueにします。
+    """
+    t_size_columns = get_terminal_size().columns - 1
+    sys.stdout.write(f'\r{str(text).ljust(t_size_columns)}')
+    sys.stdout.flush()
+    if end:
+        print()
 
 
 def load_object(file):
