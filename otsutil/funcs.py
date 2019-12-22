@@ -59,7 +59,8 @@ def fline(text='', end=False):
         end (bool, optional): 改行を行う場合にTrueにします。
     """
     t_size_columns = get_terminal_size().columns - 1
-    sys.stdout.write(f'\r{str(text).ljust(t_size_columns)}')
+    sys.stdout.write(f'\r{" "*t_size_columns}')
+    sys.stdout.write(f'\r{str(text)}')
     sys.stdout.flush()
     if end:
         print()
