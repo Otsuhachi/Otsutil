@@ -1,4 +1,4 @@
-# otsutil
+# otsutil {ignore=true}
 
 よく使う自作関数、クラスを纏めたパッケージです。
 
@@ -6,14 +6,13 @@
 
 使用は自己責任でお願いします。
 
-## 目次
+## 目次 {ignore=true}
+
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
 
 <!-- code_chunk_output -->
 
-- [otsutil](#otsutil)
-  - [目次](#目次)
   - [インストール](#インストール)
     - [pip](#pip)
     - [pipenv](#pipenv)
@@ -26,6 +25,7 @@
       - [ファイルやフォルダの名前に使用できる文字列に変換](#ファイルやフォルダの名前に使用できる文字列に変換)
       - [外部ファイルからオブジェクトを読み込む](#外部ファイルからオブジェクトを読み込む)
       - [外部ファイルにオブジェクトを保存する](#外部ファイルにオブジェクトを保存する)
+      - [リスト等から重複を取り除いたリストを生成する](#リスト等から重複を取り除いたリストを生成する)
       - [リスト等から重複を取り除いて 1 行ずつ外部ファイルに書き出す](#リスト等から重複を取り除いて-1-行ずつ外部ファイルに書き出す)
       - [質問を行い真偽値の回答を取得する](#質問を行い真偽値の回答を取得する)
       - [入力を受け取り指定した型に変換する](#入力を受け取り指定した型に変換する)
@@ -52,6 +52,7 @@
 - [制作環境](#制作環境)
 
 <!-- /code_chunk_output -->
+
 
 ## インストール
 
@@ -170,16 +171,78 @@ pipenv uninstall otsutil
 - file(str or Path): 書き出し先のファイルです。
 - protocol(int): `pickle`で使用するプロトコルです。
 
+#### リスト等から重複を取り除いたリストを生成する
+
+`deduplicate(list_)`
+
+リスト等から重複を除去します。
+
+順番を保持するので、`set()`で順番を破壊したくない際に使用できます。
+`type(list_) is str`の場合、文字列から重複が除去されてしまうので注意してください。
+
+- list_(iter): 重複を除去したいオブジェクト。
+
 #### リスト等から重複を取り除いて 1 行ずつ外部ファイルに書き出す
 
-`write_set_lines(list_, file)`
+`deduplicate_file(file=None, *adds, show_result=False, strict=True)`
 
-重複の不要なオブジェクト群を外部ファイルに 1 行ずつ書き出します。
+`txtファイル`から重複行と空行を取り除きます。
 
-フォルダに含まれているファイルの拡張子一覧を書き出したいなど、ユーザーが読むための出力を想定しています。
+- file(str or Path): 対象のファイルです。
+- adds(tuple): 渡したオブジェクトをそれぞれ`str()`してファイルの先頭に追加します。
+- show_result(bool): 何行削除したか結果を表示します。
+- strict(bool): 特定条件で例外を投げます。
 
-- list\_(iter): ユーザー向けの出力をしたい iter オブジェクトです。
-- file(str or Path): 出力先ファイルです。
+    例外の発生条件
+    - 引数`file`が`None`時に表示されるダイアログでファイルを選択しない、かつ、`strict=True`。
+    - `file`が存在せず、かつ、`adds`に値が存在しない、かつ、`strict=True`。
+    - `file`の拡張子が`.txt`以外、かつ、`strict=True`。
+
+使い方
+
+```Python
+# テストファイル生成用関数
+def create_testfile():
+    lines = [1, 3, 3, 3, 5, 5, 5, 5, 5, 7, 7, 7, 7, 7, 7, 7, 9, 9, 9, 9, 9, 9, 9, 9, 9, 0, 2, 2, 4, 4, 4, 4, 6, 6, 6, 6, 6, 6, 8, 8, 8, 8, 8, 8, 8, 8]
+    with open('test.txt', 'w') as f:
+        f.write("\n".join(map(str, lines)))
+
+# 存在するファイルから重複除去
+create_testfile()
+deduplicate_file('test.txt', show_result=True, strict=True)
+"""
+36行削除しました。
+"""
+# test.txtの中身は[1, 3, 5, 7, 9, 0, 2, 4, 6, 8]の改行区切り
+
+
+# 存在するファイルに要素を追加して重複除去
+create_testfile()
+deduplicate_file('test.txt', *range(10), show_result=True, strict=True)
+"""
+46行削除しました。
+"""
+# test.txtの中身は[0, 1, 2, 3 , 4, 5, 6, 7, 8, 9]の改行区切り
+
+# 存在しないファイルに要素を追加して除去
+not_exists_file = 'test2.txt'
+deduplicate_file(not_exists_file, *['odd' if x % 2 else x for x in range(10)], show_result=True, strict=True)
+"""
+4行削除しました。
+"""
+# test2.txtの中身は[0, odd, 2, 4, 6, 8]の改行区切り
+
+# 存在しないファイルから重複除去
+not_exists_file = 'test2.txt'
+deduplicate_file(not_exists_file, show_result=True, strict=True)
+"""
+.
+.
+.
+...
+FileNotFoundError: test2.txtは存在しません。
+"""
+```
 
 #### 質問を行い真偽値の回答を取得する
 

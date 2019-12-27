@@ -104,38 +104,69 @@ def save_object(obj, file, protocol=4):
         f.write(byte_to_str)
 
 
-def write_set_lines(list_, file):
-    """リストの要素を外部ファイルに一行ずつ書き出します。
+def deduplicate(list_):
+    """リストから重複を除去します。
 
-    主に重複して知らせる必要のないログ等を出力する際に使います。
-    既に外部ファイルが存在している場合は、既存の出力を取り込んでから重複を取り除きます。
-
-    人に見やすい形で出力することを目的としているので、文字列以外の要素をリストに含めることは推奨されません。
+    このメソッドは set でリストの順番を破壊したくない場合等に使用します。
 
     Args:
-        list_ (list): リスト。
-        file (str or Path): 外部ファイル。
+        list_ (list): 対象のリスト。
+
+    Returns:
+        list: 重複を除去したリスト。
     """
-    file = Path(file)
-    tmp = []
-    if not list_:
+    return sorted([x for x in set(list_)], key=list_.index)
+
+
+def deduplicate_file(file=None, *adds, show_result=False, strict=True):
+    """txt形式のファイルを読み込んで重複行と空行を取り除きます。
+
+    引数が None の場合、ダイアログを表示して対象のファイルを確認します。
+
+    Args:
+        file (Path or str): 対象ファイル。
+        show_result (bool): 何行削除できたか表示します。
+        strict (bool): 例外を投げます。
+
+    Raises:
+        NotSelectedError: strict かつ、選択がキャンセルされた場合。
+        FileNotFoundError: strict かつ、ファイルが存在しない場合。
+    """
+    if file is None:
+        try:
+            file = choice_file('txt', title='重複と空行を取り除きたいファイルを選択してください。')
+        except NotSelectedError as e:
+            if strict:
+                raise e
+            else:
+                return
+    if type(file) is str:
+        file = Path(file)
+    if not file.exists() and not adds:
+        if strict:
+            err = f'{file}は存在しません。'
+            raise FileNotFoundError(err)
+        return
+    suffix = file.suffix[1:]
+    if suffix not in ('txt'):
+        if strict:
+            err = f'.{suffix}は対応していません。'
+            raise ValueError(err)
         return
     if file.exists():
-        with open(file, 'r', encoding='utf8') as f:
-            # tmp += [y for x in f if (y:=x.strip())]  # Python 3.8 only
-            tmp += [x for x in f]
+        with open(file, 'r') as f:
+            lines = [x for x in map(lambda x: x.strip(), f) if x]
     else:
-        file.parent.mkdir(parents=True, exist_ok=True)
-    # tmp += [y for x in list_ if (y:=str(x).strip())]  # Python 3.8 only
-    tmp += [x for x in list_]
-    tmp = [x for x in map(lambda x: str(x).strip(), tmp) if x]
-    if '\ufeff' in tmp:
-        tmp.remove('\ufeff')
-    set_list = list(set(tmp))
-    set_list.sort(key=tmp.index)
-    text = "\n".join(set_list)
-    with open(file, 'w', encoding='utf8') as f:
-        f.write(text)
+        lines = []
+    if adds:
+        lines = [x for x in map(str, adds) if x] + lines
+    before = len(lines)
+    lines = deduplicate(lines)
+    result = before - len(lines)
+    with open(file, 'w') as f:
+        f.write('\n'.join(lines))
+    if show_result:
+        print(f'{result}行削除しました。')
 
 
 def choice_file(*types, title=None, multi=False, strict=True):
@@ -171,7 +202,7 @@ def choice_file(*types, title=None, multi=False, strict=True):
     if file in (Path(), []):
         if strict:
             # err = f'{file=}'  # Python 3.8 only
-            err = f'file: {file}'
+            err = f'無効なファイルです。file: {file}'
             raise NotSelectedError(err)
         return None
     return file
