@@ -10,11 +10,14 @@ from tkinter.messagebox import askyesno
 from otsutil.exceptions import NotSelectedError
 
 
-def create_system_name(name):
+def create_system_name(name, *, dir_mode=True):
     """引数の文字列からファイルシステムに使用できる文字列を返します。
+
+    フォルダモードでは、末尾の"."を取り除きます。
 
     Args:
         name (str): ファイルシステムに使いたい文字列。
+        dir_mode (bool, optional): フォルダモード。
 
     Returns:
         str: ファイルシステムに使える文字列。
@@ -45,7 +48,10 @@ def create_system_name(name):
     for words in zip(old_words, new_words):
         old, new = words
         new_name = new_name.replace(old, new)
-    return new_name
+    if dir_mode:
+        while new_name[-1] == '.':
+            new_name = new_name[:-1]
+    return new_name.strip()
 
 
 def fline(text='', end=False):

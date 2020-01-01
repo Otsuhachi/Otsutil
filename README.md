@@ -134,11 +134,28 @@ pipenv uninstall otsutil
 
 #### ファイルやフォルダの名前に使用できる文字列に変換
 
-`create_system_name(name)`
+`create_system_name(name, *, dir_mode=True)`
 
 ファイル名、及びフォルダ名に使用できない文字を使用可能な文字に置き換えた文字列を返します。
 
+標準ではフォルダモードで動作します。
+
 - name(str): ファイル名、フォルダ名に使用したい文字列です。
+- dir_mode(bool): フォルダモードです。
+
+使い方
+
+```Python
+string = 'A: b....c....'
+dir_mode_result = create_system_name(string)
+not_dir_mode_result = create_system_name(string, dir_mode=False)
+print('dir_mode_result:', dir_mode_result)
+print('not_dir_mode_result:', not_dir_mode_result)
+"""
+dir_mode_result: A： b....c
+not_dir_mode_result: A： b....c....
+"""
+```
 
 #### 外部ファイルからオブジェクトを読み込む
 
@@ -332,7 +349,7 @@ get_not_exists_key=None
 
 `end`を`True`にすることで出力後に改行します。
 
-```python
+```Python
 fline(1) # 直後の2に上書きされる。
 fline(2, True)
 fline(3)
