@@ -159,7 +159,7 @@ not_dir_mode_result: A： b....c....
 
 #### 外部ファイルからオブジェクトを読み込む
 
-`load_object(file)`<br>
+`load_object(file, *, encoding='utf-8')`<br>
 外部ファイルからオブジェクトを読み込みます。
 
 この関数は[save_object](#%e5%a4%96%e9%83%a8%e3%83%95%e3%82%a1%e3%82%a4%e3%83%ab%e3%81%ab%e3%82%aa%e3%83%96%e3%82%b8%e3%82%a7%e3%82%af%e3%83%88%e3%82%92%e4%bf%9d%e5%ad%98%e3%81%99%e3%82%8b)で保存したオブジェクトの読み込みを想定しています。<br>
@@ -169,10 +169,11 @@ not_dir_mode_result: A： b....c....
 複数のオブジェクトを扱いたい場合は、[pickle_dict](#pickle_dict)を使用してください。
 
 - file(str or Path): 読み込むファイルです。
+- encoding(str): 外部ファイルのエンコードです。
 
 #### 外部ファイルにオブジェクトを保存する
 
-`save_object(obj, file, protocol=4)`
+`save_object(obj, file, *, encoding='utf-8', protocol=4)`
 
 オブジェクトを外部ファイルに保存します。
 
@@ -186,6 +187,7 @@ not_dir_mode_result: A： b....c....
 
 - obj(object): 保存したいオブジェクトです。
 - file(str or Path): 書き出し先のファイルです。
+- encoding(str): 外部ファイルのエンコードです。
 - protocol(int): `pickle`で使用するプロトコルです。
 
 #### リスト等から重複を取り除いたリストを生成する
@@ -201,13 +203,14 @@ not_dir_mode_result: A： b....c....
 
 #### リスト等から重複を取り除いて 1 行ずつ外部ファイルに書き出す
 
-`deduplicate_file(file=None, *adds, show_result=False, strict=True)`
+`deduplicate_file(file=None, *adds, show_result=False, encoding='utf-8', strict=True)`
 
 `txtファイル`から重複行と空行を取り除きます。
 
 - file(str or Path): 対象のファイルです。
 - adds(tuple): 渡したオブジェクトをそれぞれ`str()`してファイルの先頭に追加します。
 - show_result(bool): 何行削除したか結果を表示します。
+- encoding(str): 外部ファイルのエンコードです。
 - strict(bool): 特定条件で例外を投げます。
 
     例外の発生条件

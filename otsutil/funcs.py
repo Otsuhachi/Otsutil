@@ -50,8 +50,8 @@ def create_system_name(name, *, dir_mode=True):
         new_name = new_name.replace(old, new)
     if dir_mode:
         while new_name[-1] == '.':
-            new_name = new_name[:-1]
-    return new_name.strip()
+            new_name = new_name[:-1].strip()
+    return new_name
 
 
 def fline(text='', end=False):
@@ -72,12 +72,12 @@ def fline(text='', end=False):
         print()
 
 
-def load_object(file):
+def load_object(file, *, encoding='utf-8'):
     """外部ファイルから暗号化されたオブジェクトを読み込みます。
 
     Args:
         file (str or Path): 外部ファイル。
-
+        encoding (str, optional): 読み込むファイルのエンコード。
     Raises:
         FileNotFoundError: 指定した外部ファイルが存在しない場合に投げられます。
 
@@ -87,18 +87,19 @@ def load_object(file):
     file = Path(file)
     if not file.exists():
         raise FileNotFoundError
-    with open(file, 'r') as f:
+    with open(file, 'r', encoding=encoding) as f:
         b64_str = f.read().encode()
     str_to_byte = base64.b64decode(b64_str)
     return pickle.loads(str_to_byte)
 
 
-def save_object(obj, file, protocol=4):
+def save_object(obj, file, *, encoding='utf-8', protocol=4):
     """オブジェクトを暗号化して外部ファイルに保存します。
 
     Args:
         obj (object): オブジェクト。
         file (str or Path): 外部ファイル。
+        encoding (str, optional): 出力するファイルのエンコード。
         protocol (int, optional): pickleのprotocol。`1-5`まで選択可能。 指定しなければ `4`。
     """
     file = Path(file)
@@ -106,7 +107,7 @@ def save_object(obj, file, protocol=4):
     byte_to_str = base64.b64encode(obj_to_byte).decode('utf-8')
     if not file.exists():
         file.parent.mkdir(parents=True, exist_ok=True)
-    with open(file, 'w') as f:
+    with open(file, 'w', encoding=encoding) as f:
         f.write(byte_to_str)
 
 
@@ -124,7 +125,7 @@ def deduplicate(list_):
     return sorted([x for x in set(list_)], key=list_.index)
 
 
-def deduplicate_file(file=None, *adds, show_result=False, strict=True):
+def deduplicate_file(file=None, *adds, show_result=False, encoding='utf-8', strict=True):
     """txt形式のファイルを読み込んで重複行と空行を取り除きます。
 
     引数が None の場合、ダイアログを表示して対象のファイルを確認します。
@@ -160,16 +161,16 @@ def deduplicate_file(file=None, *adds, show_result=False, strict=True):
             raise ValueError(err)
         return
     if file.exists():
-        with open(file, 'r') as f:
+        with open(file, 'r', encoding=encoding) as f:
             lines = [x for x in map(lambda x: x.strip(), f) if x]
     else:
         lines = []
     if adds:
-        lines = [x for x in map(str, adds) if x] + lines
+        lines = [x for x in map(lambda x: str(x).strip() if x is not None else '', adds) if x] + lines
     before = len(lines)
     lines = deduplicate(lines)
     result = before - len(lines)
-    with open(file, 'w') as f:
+    with open(file, 'w', encoding=encoding) as f:
         f.write('\n'.join(lines))
     if show_result:
         print(f'{result}行削除しました。')
