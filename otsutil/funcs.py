@@ -103,7 +103,7 @@ def save_object(obj, file, *, encoding='utf-8', protocol=4):
         protocol (int, optional): pickleのprotocol。`1-5`まで選択可能。 指定しなければ `4`。
     """
     file = Path(file)
-    obj_to_byte = pickle.dumps(obj, protocol=4)
+    obj_to_byte = pickle.dumps(obj, protocol=protocol)
     byte_to_str = base64.b64encode(obj_to_byte).decode('utf-8')
     if not file.exists():
         file.parent.mkdir(parents=True, exist_ok=True)
