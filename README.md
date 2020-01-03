@@ -372,7 +372,7 @@ fline(3)
 
 #### 管理オブジェクトの生成
 
-`Pdict(file, reset_data=False)`
+`PDict(file, reset_data=False)`
 
 以降紹介する方法は、ここで紹介する方法のどちらかを実行してから行ってください。
 
