@@ -33,6 +33,11 @@ def create_system_name(name, *, dir_mode=True):
         '<',
         '>',
         '|',
+        ',',
+        '•',
+        ' ',
+        '~',
+        '&',
     )
     new_words = (
         '-',
@@ -44,6 +49,11 @@ def create_system_name(name, *, dir_mode=True):
         '＜',
         '＞',
         '｜',
+        '_',
+        '・',
+        '_',
+        '-',
+        '＆',
     )
     for words in zip(old_words, new_words):
         old, new = words
