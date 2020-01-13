@@ -35,7 +35,6 @@ def create_system_name(name, *, dir_mode=True):
         '|',
         ',',
         '•',
-        ' ',
         '~',
         '&',
     )
@@ -51,7 +50,6 @@ def create_system_name(name, *, dir_mode=True):
         '｜',
         '_',
         '・',
-        '_',
         '-',
         '＆',
     )
