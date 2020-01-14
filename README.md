@@ -131,7 +131,13 @@ pipenv uninstall otsutil
 
 ファイル名、及びフォルダ名に使用できない文字を使用可能な文字に置き換えた文字列を返します。
 
-標準ではフォルダモードで動作します。
+標準ではフォルダモードで動作します。  
+フォルダモードでは、末尾の`.`を消去します。
+
+また、先頭と末尾の空白は除去され、**2文字以上の連続した**半角空白は半角空白1つに変換されます。
+
+また、`name=''`のような場合には`ValueError`を、  
+加工をし、最終的に`return ''`になる場合には`InvalidStringError`がそれぞれ投げられます。
 
 - name(str): ファイル名、フォルダ名に使用したい文字列です。
 - dir_mode(bool): フォルダモードです。
@@ -149,6 +155,37 @@ dir_mode_result: A： b....c
 not_dir_mode_result: A： b....c....
 """
 ```
+
+<details>
+  <summary>例外発生の補足
+  </summary>
+
+  ```Python
+p = lambda x: print(f'<<{x}>>')  # 出力用の無名関数
+
+valid_string = '  A....B....&C.......'
+invalid_string1 = ''
+invalid_string2 = '  .  　'
+invalid_string3 = ' . . . . '
+
+p(create_system_name(valid_string))
+p(create_system_name(valid_string, dir_mode=False))
+p(create_system_name(invalid_string2, dir_mode=False))
+p(create_system_name(invalid_string3, dir_mode=False))
+
+# p(create_system_name(invalid_string1))  # ValueError
+# p(create_system_name(invalid_string2))  # InvalidStringError
+# p(create_system_name(invalid_string3))  # InvalidStringError
+"""
+<<A....B....＆C>>
+<<A....B....＆C.......>>
+<<.>>
+<<. . . .>>
+"""
+
+  ```
+  
+</details>
 
 #### 外部ファイルからオブジェクトを読み込む
 

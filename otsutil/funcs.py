@@ -7,7 +7,7 @@ from shutil import get_terminal_size
 from tkinter.filedialog import askdirectory, askopenfilename, askopenfilenames
 from tkinter.messagebox import askyesno
 
-from otsutil.exceptions import NotSelectedError
+from otsutil.exceptions import InvalidStringError, NotSelectedError
 
 
 def create_system_name(name, *, dir_mode=True):
@@ -19,47 +19,62 @@ def create_system_name(name, *, dir_mode=True):
         name (str): ファイルシステムに使いたい文字列。
         dir_mode (bool, optional): フォルダモード。
 
+    Raises:
+        ValueError: 引数の文字列が空の場合に投げられます。
+        InvalidStringError: 処理の結果、文字列が空白のみになる場合に投げられます。
+    
     Returns:
         str: ファイルシステムに使える文字列。
     """
-    new_name = name
-    old_words = (
-        '\\',
-        '/',
-        ':',
-        '*',
-        '?',
-        '"',
-        '<',
-        '>',
-        '|',
-        ',',
-        '•',
-        '~',
-        '&',
-    )
-    new_words = (
-        '-',
-        '-',
-        '：',
-        '・',
-        '？',
-        "'",
-        '＜',
-        '＞',
-        '｜',
-        '_',
-        '・',
-        '-',
-        '＆',
-    )
-    for words in zip(old_words, new_words):
-        old, new = words
-        new_name = new_name.replace(old, new)
-    if dir_mode:
-        while new_name[-1] == '.':
-            new_name = new_name[:-1].strip()
-    return new_name
+    if not name:
+        err = '文字列が無効です。'
+        raise ValueError(err)
+    try:
+        old_words = (
+            '\\',
+            '/',
+            ':',
+            '*',
+            '?',
+            '"',
+            '<',
+            '>',
+            '|',
+            ',',
+            '•',
+            '~',
+            '&',
+        )
+        new_words = (
+            '-',
+            '-',
+            '：',
+            '・',
+            '？',
+            "'",
+            '＜',
+            '＞',
+            '｜',
+            '_',
+            '・',
+            '-',
+            '＆',
+        )
+        new_name = name.strip()
+        for words in zip(old_words, new_words):
+            new_name = new_name.replace(*words)
+        if dir_mode:
+            while new_name[-1] == '.':
+                new_name = new_name[:-1].strip()
+        while '  ' in new_name:
+            new_name = new_name.replace('  ', ' ')
+        new_name = new_name.strip()
+        if new_name:
+            return new_name
+    except Exception:
+        pass
+    err = f'引数の文字列[{name}]は不正です。'
+    raise InvalidStringError(err)
 
 
 def fline(text='', end=False):
