@@ -1,7 +1,9 @@
 import base64
 import pickle
 import sys
+import time
 import tkinter
+from functools import wraps
 from pathlib import Path
 from shutil import get_terminal_size
 from tkinter.filedialog import askdirectory, askopenfilename, askopenfilenames
@@ -347,5 +349,43 @@ def get_dict_in_value(dict_):
             return dict_[key]
         except Exception:
             return None
+
+    return _
+
+
+def watch_exec_time(count=1):
+    """指定回数関数を実行し、実行時間の平均を計測するラッパー関数です。
+
+    実行した関数名、回数、平均時間を出力します。
+    また、平均実行時間、最後に関数を実行した際の結果を返します。
+    
+    Args:
+        count (int, optional): 関数の実行回数です。
+
+    Raises:
+        ValueError: int(count)した際に変換不能な値の場合に投げられます。
+        ValueError: countが1未満の数の場合に投げられます。
+    
+    Returns:
+        tuple[float, object]: 平均実行時間と、最後に関数を実行した際の戻り値。
+    """
+    count = int(count)
+    if count < 1:
+        err = "引数 count は1以上の整数である必要があります。"
+        raise ValueError(err)
+
+    def _(f):
+        @wraps(f)
+        def __(*args, **kargs):
+            sum_time = 0
+            for i in range(count):
+                start = time.time()
+                result = f(*args, **kargs)
+                sum_time += time.time() - start
+            ave_time = sum_time / count
+            print(f'{f.__name__}を{count}回実行した結果、実行時間の平均は{ave_time}秒となりました。')
+            return ave_time, result
+
+        return __
 
     return _
