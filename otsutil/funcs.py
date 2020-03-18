@@ -291,6 +291,41 @@ def confirm(message, use_gui=True, prompt='>'):
         print('no: no, n, いいえ, イイエ')
 
 
+def parg(__space__=' = ', __sep__='\n', __repr__=False, **kwargs):
+    """キーワード引数の内容を指定形式で出力します。
+
+    キーワード引数を指定しなかった場合は何も行いません。
+
+    Example:
+        >>> parg(test1=100, test2='100')
+        test1 = 100
+        test2 = 100
+        >>> parg(test1=100, test2='100', __repr__=True)
+        'test1' = 100
+        'test2' = '100'
+        >>> parg(test1=100, test2='100', __space__=': ', __sep__=',\t')
+        test1: 100,     test2: 100
+    Args:
+        __space__ (str, optional): キーと値の間に挿入する文字列です。
+        __sep__ (str, optional): キーの間に挿入する文字列です。
+        __repr__ (bool, optional): キーと値を repr して出力します。
+    """
+    if kwargs:
+        text = ''
+        first = True
+        for item in kwargs.items():
+            if __repr__:
+                key, value = map(lambda x: repr(x), item)
+            else:
+                key, value = item
+            if first:
+                first = False
+            else:
+                text += __sep__
+            text += f'{key}{__space__}{value}'
+        print(text)
+
+
 def type_input(convert_type=str, message="", prompt='>', allow_empty=False):
     """指定した型に変換可能な文字列を受け取ります。
     Args:
