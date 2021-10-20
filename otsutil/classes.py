@@ -17,10 +17,6 @@ class ObjectSaver:
             file (Union[str, Path]): オブジェクトを保存するファイルです。
         """
         self.__file = setup_path(file)
-        self.__data = None
-        self.__loaded = False
-        if self.__file.exists():
-            self.load_file()
 
     @staticmethod
     def dumps(obj: Any) -> str:
@@ -51,14 +47,17 @@ class ObjectSaver:
     def load_file(self) -> Any:
         """ファイルに保存されているデータを読み込み、取得します。
 
+        ファイルが存在しなかった場合にはNoneを保存したファイルを生成し、Noneを返します。
+
         Returns:
             Any: ファイルに保存されていたオブジェクトです。
         """
-        if not self.__loaded:
+        if self.__file.exists():
             with open(self.__file, 'r', encoding='utf-8') as f:
-                self.__data = self.loads(f.read())
-            self.__loaded = True
-        return self.__data
+                return self.loads(f.read())
+        else:
+            self.save_file(None)
+        return None
 
     def save_file(self, obj: Any) -> bool:
         """ファイルにobjを保存します。
@@ -75,7 +74,6 @@ class ObjectSaver:
             bts = self.dumps(obj)
             with open(self.__file, 'w', encoding='utf-8') as f:
                 f.write(bts)
-            self.__data = obj
             return True
         except Exception as e:
             return False
