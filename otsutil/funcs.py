@@ -136,7 +136,7 @@ def setup_path(path: Union[str, Path], is_dir: bool = False) -> Path:
     return path
 
 
-def write_lines(file: Union[str, Path], lines: Iterable, add_blank_line: bool = True, **kwargs) -> None:
+def write_lines(file: Union[str, Path], lines: Iterable, add_blank_line: bool = False, **kwargs) -> None:
     """ファイルにlinesを１行ずつ書き出します。
 
     各行の改行、空白記号はそのまま保持されます。
@@ -150,7 +150,7 @@ def write_lines(file: Union[str, Path], lines: Iterable, add_blank_line: bool = 
     Args:
         file (Union[str, Path]): 書き出し先のファイルです。
         lines (Iterable): 書き出す行です。
-        add_blank_line (bool, optional): ファイル末尾に空行を追加します。
+        add_blank_line (bool, optional): ファイル末尾に空行を追加するかどうかです。
     """
     file = setup_path(file)
     kwargs['file'] = file
