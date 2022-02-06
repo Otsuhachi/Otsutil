@@ -95,7 +95,7 @@ def read_lines(file: Union[str, Path], ignore_blankline: bool = False, **kwargs)
             yield line
 
 
-def save_json(file: Union[str, Path], data: Union[dict, list], encoding: str = 'utf-8', **kwargs):
+def save_json(file: Union[str, Path], data: Union[dict, list], encoding: str = 'utf-8', **kwargs) -> None:
     """指定したファイルにデータをjson形式で書き出します。
 
     キーワード引数にはjson.dumpで使用できる引数を与えることができます。
@@ -136,7 +136,7 @@ def setup_path(path: Union[str, Path], is_dir: bool = False) -> Path:
     return path
 
 
-def write_lines(file: Union[str, Path], lines: Iterable, **kwargs):
+def write_lines(file: Union[str, Path], lines: Iterable, add_blank_line: bool = True, **kwargs) -> None:
     """ファイルにlinesを１行ずつ書き出します。
 
     各行の改行、空白記号はそのまま保持されます。
@@ -150,6 +150,7 @@ def write_lines(file: Union[str, Path], lines: Iterable, **kwargs):
     Args:
         file (Union[str, Path]): 書き出し先のファイルです。
         lines (Iterable): 書き出す行です。
+        add_blank_line (bool, optional): ファイル末尾に空行を追加します。
     """
     file = setup_path(file)
     kwargs['file'] = file
@@ -162,3 +163,5 @@ def write_lines(file: Union[str, Path], lines: Iterable, **kwargs):
             if i:
                 line = f'\n{line}'
             f.write(line)
+        if add_blank_line:
+            f.write('\n')
