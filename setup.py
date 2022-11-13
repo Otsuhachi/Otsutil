@@ -9,7 +9,7 @@ with open('LICENSE.txt', 'r', encoding='utf-8') as f:
 info = sys.version_info
 setup(
     name='otsutil',
-    version='2022.2.7.1',
+    version='2022.11.13',
     url='https://github.com/Otsuhachi/Otsutil',
     description='よく使う関数、クラスを纏めたライブラリ',
     long_description_content_type='text/markdown',

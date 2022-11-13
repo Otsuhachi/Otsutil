@@ -39,7 +39,8 @@ classesモジュールでは以下のクラスが定義されています。
 クラス名|概要
 :--:|:--
 ObjectSaver|`pickle`でシリアライズ可能なオブジェクトをファイルで扱うクラス
-OtsuNoneType|`None`のような何か<br>`None`を返す可能性のある`dict`で`get`するときの`default`などに使う<br>`OtsuNone`という変数があるので基本的にはそちらをインポートして使う
+OtsuNoneType|`None`のような何か<br>`None`を返す可能性のある`dict`で`get`するときの`default`などに使う<br>`OtsuNone`という定数があるので基本的にはそちらをインポートして使う
+Timer|`n秒タイマー`<br>`n秒経過するまで`, `今からn秒経過するまで`, `n秒経過したか`などを判定したり<br>`for文で定期的に処理を割り込ませる`ためのメソッドなどがある
 
 <!-- omit in toc -->
 ### funcsモジュール
