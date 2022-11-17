@@ -14,6 +14,7 @@ FLOAT_INT = TypeVar('FLOAT_INT', float, int)
 class ObjectSaver:
     """オブジェクトを保存するファイルを扱うクラスです。
     """
+
     def __init__(self, file: Union[str, Path]):
         """オブジェクトを保存するファイルを準備します。
 
@@ -105,7 +106,7 @@ class Timer:
     """
     HOUR_SECONDS: ClassVar[int] = 3600
     MINUTE_SECONDS: ClassVar[int] = 60
-    MINIMUM_SECONDS: ClassVar[float] = 0.005
+    MINIMUM_SECONDS: ClassVar[float] = 0.0
 
     @classmethod
     def check_minimum_seconds(cls, seconds: FLOAT_INT) -> FLOAT_INT:

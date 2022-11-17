@@ -9,7 +9,7 @@ with open('LICENSE.txt', 'r', encoding='utf-8') as f:
 info = sys.version_info
 setup(
     name='otsutil',
-    version='2022.11.13',
+    version='2022.11.17',
     url='https://github.com/Otsuhachi/Otsutil',
     description='よく使う関数、クラスを纏めたライブラリ',
     long_description_content_type='text/markdown',
@@ -32,5 +32,5 @@ setup(
         'License :: OSI Approved :: MIT License',
     ],
     license=lcs,
-    keywords='Python ObjectSaver deduplicate load_json read_lines save_json setup_path write_lines',
+    keywords='Python ObjectSaver deduplicate load_json read_lines save_json setup_path write_lines timer',
 )
