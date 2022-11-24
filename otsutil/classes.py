@@ -80,7 +80,7 @@ class ObjectSaver:
             with open(self.__file, 'w', encoding='utf-8') as f:
                 f.write(bts)
             return True
-        except Exception as e:
+        except Exception:
             return False
 
 
@@ -126,13 +126,13 @@ class Timer:
             raise ValueError(msg)
         return seconds
 
-    def __init__(self, hours: int = 0, minutes: int = 0, seconds: int = 0) -> None:
+    def __init__(self, hours: int = 0, minutes: int = 0, seconds: float = 0) -> None:
         """h時間m分s秒を測るタイマーインスタンスを生成します。
 
         Args:
             hours (int, optional): h時間。
             minutes (int, optional): m分。
-            seconds (int, optional): s秒。
+            seconds (float, optional): s秒。
         """
         seconds += hours * Timer.HOUR_SECONDS
         seconds += minutes * Timer.MINUTE_SECONDS
