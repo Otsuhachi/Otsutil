@@ -1,167 +1,265 @@
+from __future__ import annotations
+
+"""よく使う関数を纏めたモジュールです。
+"""
+
+__all__ = (
+    "deduplicate",
+    "load_json",
+    "read_lines",
+    "save_json",
+    "setup_path",
+    "str_to_path",
+    "write_lines",
+)
+
+
 import json
 
+from collections import deque
 from pathlib import Path
-from typing import Generator, Iterable, Union, overload
+from typing import (
+    Deque,
+    Iterable,
+    Iterator,
+    List,
+    Sequence,
+    Tuple,
+    Union,
+    overload,
+)
+
+from .types import T, pathLike
 
 
 @overload
-def deduplicate(values: list) -> list:
+def deduplicate(values: Deque[T]) -> Deque[T]:
+    """デックから重複を取り除きます。
+
+    この関数はset(values)で順番を破壊したくない場合などに使用します。
+
+    Args:
+        values (Deque[T]): 重複を取り除きたいデック。
+
+    Returns:
+        Deque[T]: 重複を除去したデック。
+    """
+    ...
+
+
+@overload
+def deduplicate(values: List[T]) -> List[T]:
     """リストから重複を取り除きます。
 
     この関数はset(values)で順番を破壊したくない場合などに使用します。
 
     Args:
-        values (list): 対象のリストです。
+        values (List[T, ...]): 重複を取り除きたいリスト。
 
     Returns:
-        list: 重複を除去したリストです。
+        List[T, ...]: 重複を除去したリスト。
     """
     ...
 
 
 @overload
-def deduplicate(values: tuple) -> tuple:
+def deduplicate(values: Tuple[T]) -> Tuple[T]:
+    """tupleから重複を取り除きます。
+
+    この関数はset(values)で順番を破壊したくない場合などに使用します。
+
+    Args:
+        values (Tuple[T]): 重複を取り除きたいtuple。
+
+    Returns:
+        Tuple[T]: 重複を除去したtuple。
+    """
+    ...
+
+
+@overload
+def deduplicate(values: Tuple[T, ...]) -> Tuple[T, ...]:
     """タプルから重複を取り除きます。
 
     この関数はset(values)で順番を破壊したくない場合などに使用します。
 
     Args:
-        values (tuple): 対象のタプルです。
+        values (Tuple[T, ...]): 重複を取り除きたいタプル。
 
     Returns:
-        tuple: 重複を除去したタプルです。
+        Tuple[T, ...]: 重複を除去したタプル。
     """
     ...
 
 
-def deduplicate(values: Union[list, tuple]) -> Union[list, tuple]:
-    f = type(values)
-    if f not in (list, tuple):
-        msg = f'(list, tuple)いずれかの型である必要があります。'
-        raise TypeError(msg)
+def deduplicate(values: Sequence[T]) -> Sequence[T]:
+    """シーケンスから重複を取り除きます。
+
+    この関数はset(values)で順番を破壊したくない場合などに使用します。
+    また、シーケンスがデック, リスト, タプルのいずれかの場合はシーケンスの型も保持します。
+    それ以外の場合はList[T]になります。
+
+    Args:
+        values (Sequence[T]): 重複を取り除きたいシーケンス。
+
+    Returns:
+        Sequence[T]: 重複を除去したシーケンス。
+    """
     res = sorted(set(values), key=values.index)
-    return f(res)
+    if type(values) is tuple:
+        res = tuple(res)
+    elif type(values) is deque:
+        res = deque(res)
+    return res
 
 
-def load_json(file: Union[str, Path], encoding: str = 'utf-8', **kwargs) -> Union[dict, list]:
+def load_json(file: pathLike, encoding: str = "utf-8", **kwargs) -> Union[dict, list]:
     """json形式のファイルを読み込み、jsonデータを返します。
 
     キーワード引数にはjson.loadで使用できる引数を与えることができます。
 
     Args:
-        file (Path): json形式のファイルです。
-        encoding (str, optional): ファイルのエンコードです。指定しない場合utf-8で扱います。
+        file (Path): json形式のファイル。
+        encoding (str, optional): ファイルのエンコード。指定しない場合utf-8で扱います。
 
     Raises:
         FileNotFoundError: ファイルが存在しないかフォルダの場合に投げられます。
 
     Returns:
-        Union[dict, list]: 読み込んだJSONです。
+        Union[dict, list]: jsonデータ。
     """
-    file = setup_path(file)
+    file = str_to_path(file)
     if not file.is_file():
-        msg = f'{file}は存在しないかファイルではありません。'
+        msg = f"{file}は存在しないかファイルではありません。"
         raise FileNotFoundError(msg)
-    with open(file, 'r', encoding=encoding) as f:
-        kwargs['fp'] = f
+    with file.open("r", encoding=encoding) as f:
+        kwargs["fp"] = f
         return json.load(**kwargs)
 
 
-def read_lines(file: Union[str, Path], ignore_blankline: bool = False, **kwargs) -> Generator[str, None, None]:
-    """ファイルを読み込み、1行ずつ返すジェネレータです。
+def read_lines(file: pathLike, ignore_blank_line: bool = False, encoding: str = "utf-8", **kwargs) -> Iterator[str]:
+    """ファイルを読み込み、1行ずつ返すイテレータを生成します。
 
     行右端の改行を自動で除去します。
-    
+
     キーワード引数にはopenで使用できる引数を与えることができますが、modeはrで固定されます。
-    encodingは指定しなかった場合utf-8になります。
 
     Args:
-        file (Union[str, Path]): 読み込むファイルです。
-        ignore_blankline (bool, optional): line.strip()したときに空文字になる行を無視します。
+        file (pathLike): 読み込むファイル。
+        ignore_blank_line (bool, optional): line.strip()したときに空文字になる行を無視します。 Defaults to False.
+        encoding (str, optional): 読み込むファイルのエンコード。 Defaults to "utf-8".
+
+    Raises:
+        FileNotFoundError: ファイルが存在しないかフォルダの場合に投げられます。
 
     Yields:
-        Generator[str, None, None]: ファイルの行です。
+        Iterator[str]: ファイルの各行を返すイテレータ。
     """
-    file = setup_path(file)
-    kwargs['file'] = file
-    kwargs['mode'] = 'r'
-    if kwargs.get('encoding') is None:
-        kwargs['encoding'] = 'utf-8'
-    with open(**kwargs) as f:
-        gen = map(lambda x: x.rstrip('\n'), f)
-        if ignore_blankline:
+    file = str_to_path(file)
+    if not file.is_file():
+        msg = f"{file}は存在しないかファイルではありません。"
+        raise FileNotFoundError(msg)
+    kwargs["encoding"] = encoding
+    if "file" in kwargs:
+        del kwargs["file"]
+    kwargs["mode"] = "r"
+    with file.open(**kwargs) as f:
+        gen = map(lambda x: x.rstrip("\n"), f)
+        if ignore_blank_line:
             gen = filter(lambda x: x.strip(), gen)
         for line in gen:
             yield line
 
 
-def save_json(file: Union[str, Path], data: Union[dict, list], encoding: str = 'utf-8', **kwargs) -> None:
+def save_json(
+    file: pathLike,
+    data: Union[dict, list],
+    encoding: str = "utf-8",
+    ensure_ascii: bool = False,
+    indent: Union[int, str, None] = 4,
+    sort_keys: bool = True,
+    **kwargs,
+) -> None:
     """指定したファイルにデータをjson形式で書き出します。
 
     キーワード引数にはjson.dumpで使用できる引数を与えることができます。
 
     Args:
-        file (Path): 出力先のファイルです。
-        data (Union[list,dict]): 出力するデータです。
-        encoding (str): ファイルのエンコードです。指定しない場合utf-8で扱います。
+        file (pathLike): 出力先ファイル。
+        data (Union[dict, list]): 出力するデータ。
+        encoding (str, optional): 出力するファイルのエンコード。 Defaults to "utf-8".
+        ensure_ascii (bool, optional): json.dumpsのensure_ascii引数。 Defaults to False.
+        indent (Union[int, str, None], optional): json.dumpsのindent引数 Defaults to 4.
+        sort_keys (bool, optional): json.dumpsのsort_keys引数 Defaults to True.
     """
     file = setup_path(file)
-    with open(file, 'w', encoding=encoding) as f:
-        kwargs['fp'] = f
-        kwargs['obj'] = data
+    with file.open("w", encoding=encoding) as f:
+        kwargs["fp"] = f
+        kwargs["obj"] = data
+        kwargs["ensure_ascii"] = ensure_ascii
+        kwargs["indent"] = indent
+        kwargs["sort_keys"] = sort_keys
         json.dump(**kwargs)
 
 
-def setup_path(path: Union[str, Path], is_dir: bool = False) -> Path:
+def setup_path(path: pathLike, is_dir: bool = False) -> Path:
     """親ディレクトリの存在を確認、生成、保証しパスを返します。
 
     is_dirがTrueの場合にはpathを生成します。
 
     Args:
-        path (Union[str, Path]): 使用したいパスです。
-        is_dir (bool, optional): パスがディレクトリかどうかです。
+        path (Union[str, Path]): 使用したいパス。
+        is_dir (bool, optional): パスがディレクトリかどうか。
 
     Returns:
-        Path: 使用可能なパスです。
+        Path: 使用可能なパス。
     """
-    if not isinstance(path, Path):
-        path = Path(path)
+    path = str_to_path(path)
     if is_dir:
         p = path
     else:
         p = path.parent
-
     if not p.exists():
         p.mkdir(parents=True)
     return path
 
 
-def write_lines(file: Union[str, Path], lines: Iterable, add_blank_line: bool = False, **kwargs) -> None:
-    """ファイルにlinesを１行ずつ書き出します。
-
-    各行の改行、空白記号はそのまま保持されます。
-    そのためlen(lines)とfileに書き出された行数は一致しない場合があります。
-
-    キーワード引数にはopenで使用できる引数を与えることができます。
-    modeは指定されていない場合はwになります。
-    またmodeが適正かどうかはopen文でチェックされるので、rなどを与えると例外が発生します。
-    encodingは指定しなかった場合utf-8になります。
+def str_to_path(path: pathLike) -> Path:
+    """文字列をパスに変換します。
 
     Args:
-        file (Union[str, Path]): 書き出し先のファイルです。
-        lines (Iterable): 書き出す行です。
-        add_blank_line (bool, optional): ファイル末尾に空行を追加するかどうかです。
+        path (pathLike): パスにしたい文字列。またはパス。
+
+    Returns:
+        Path: パス。
+    """
+    if isinstance(path, Path):
+        return path
+    return Path(path)
+
+
+def write_lines(file: pathLike, lines: Iterable, add_blank_line: bool = False, encoding: str = "utf-8", **kwargs) -> None:
+    """ファイルにlinesを1行ずつ書き出します。
+
+    キーワード引数にはPath().openで使用できる引数を与えることができます。
+
+    Args:
+        file (pathLike): 出力先ファイル。
+        lines (Iterable): 出力する行データ。
+        add_blank_line (bool, optional): ファイル末尾が空白行になるようにするか。 Defaults to False.
+        encoding (str, optional): 出力するファイルのエンコード。 Defaults to "utf-8".
     """
     file = setup_path(file)
-    kwargs['file'] = file
-    if kwargs.get('mode') is None:
-        kwargs['mode'] = 'w'
-    if kwargs.get('encoding') is None:
-        kwargs['encoding'] = 'utf-8'
-    with open(**kwargs) as f:
+    kwargs["encoding"] = encoding
+    kwargs["mode"] = "w"
+    if "file" in kwargs:
+        del kwargs["file"]
+    with file.open(**kwargs) as f:
+        last_line = ""
         for i, line in enumerate(map(str, lines)):
+            last_line = line
             if i:
-                line = f'\n{line}'
+                line = f"\n{line}"
             f.write(line)
-        if add_blank_line:
-            f.write('\n')
+        if add_blank_line and last_line.strip():
+            f.write("\n")
