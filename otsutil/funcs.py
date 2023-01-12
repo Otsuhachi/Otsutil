@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """よく使う関数を纏めたモジュールです。
 """
 
@@ -18,76 +16,67 @@ import json
 
 from collections import deque
 from pathlib import Path
-from typing import (
-    Deque,
-    Iterable,
-    Iterator,
-    List,
-    Sequence,
-    Tuple,
-    Union,
-    overload,
-)
+from typing import Iterable, Iterator, Sequence, overload
 
 from .types import T, pathLike
 
 
 @overload
-def deduplicate(values: Deque[T]) -> Deque[T]:
+def deduplicate(values: deque[T]) -> deque[T]:
     """デックから重複を取り除きます。
 
     この関数はset(values)で順番を破壊したくない場合などに使用します。
 
     Args:
-        values (Deque[T]): 重複を取り除きたいデック。
+        values (deque[T]): 重複を取り除きたいデック。
 
     Returns:
-        Deque[T]: 重複を除去したデック。
+        deque[T]: 重複を除去したデック。
     """
     ...
 
 
 @overload
-def deduplicate(values: List[T]) -> List[T]:
+def deduplicate(values: list[T]) -> list[T]:
     """リストから重複を取り除きます。
 
     この関数はset(values)で順番を破壊したくない場合などに使用します。
 
     Args:
-        values (List[T, ...]): 重複を取り除きたいリスト。
+        values (list[T, ...]): 重複を取り除きたいリスト。
 
     Returns:
-        List[T, ...]: 重複を除去したリスト。
+        list[T, ...]: 重複を除去したリスト。
     """
     ...
 
 
 @overload
-def deduplicate(values: Tuple[T]) -> Tuple[T]:
+def deduplicate(values: tuple[T]) -> tuple[T]:
     """tupleから重複を取り除きます。
 
     この関数はset(values)で順番を破壊したくない場合などに使用します。
 
     Args:
-        values (Tuple[T]): 重複を取り除きたいtuple。
+        values (tuple[T]): 重複を取り除きたいtuple。
 
     Returns:
-        Tuple[T]: 重複を除去したtuple。
+        tuple[T]: 重複を除去したtuple。
     """
     ...
 
 
 @overload
-def deduplicate(values: Tuple[T, ...]) -> Tuple[T, ...]:
+def deduplicate(values: tuple[T, ...]) -> tuple[T, ...]:
     """タプルから重複を取り除きます。
 
     この関数はset(values)で順番を破壊したくない場合などに使用します。
 
     Args:
-        values (Tuple[T, ...]): 重複を取り除きたいタプル。
+        values (tuple[T, ...]): 重複を取り除きたいタプル。
 
     Returns:
-        Tuple[T, ...]: 重複を除去したタプル。
+        tuple[T, ...]: 重複を除去したタプル。
     """
     ...
 
@@ -97,7 +86,7 @@ def deduplicate(values: Sequence[T]) -> Sequence[T]:
 
     この関数はset(values)で順番を破壊したくない場合などに使用します。
     また、シーケンスがデック, リスト, タプルのいずれかの場合はシーケンスの型も保持します。
-    それ以外の場合はList[T]になります。
+    それ以外の場合はlist[T]になります。
 
     Args:
         values (Sequence[T]): 重複を取り除きたいシーケンス。
@@ -113,7 +102,7 @@ def deduplicate(values: Sequence[T]) -> Sequence[T]:
     return res
 
 
-def load_json(file: pathLike, encoding: str = "utf-8", **kwargs) -> Union[dict, list]:
+def load_json(file: pathLike, encoding: str = "utf-8", **kwargs) -> dict | list:
     """json形式のファイルを読み込み、jsonデータを返します。
 
     キーワード引数にはjson.loadで使用できる引数を与えることができます。
@@ -126,7 +115,7 @@ def load_json(file: pathLike, encoding: str = "utf-8", **kwargs) -> Union[dict, 
         FileNotFoundError: ファイルが存在しないかフォルダの場合に投げられます。
 
     Returns:
-        Union[dict, list]: jsonデータ。
+        dict | list: jsonデータ。
     """
     file = str_to_path(file)
     if not file.is_file():
@@ -173,10 +162,10 @@ def read_lines(file: pathLike, ignore_blank_line: bool = False, encoding: str = 
 
 def save_json(
     file: pathLike,
-    data: Union[dict, list],
+    data: dict | list,
     encoding: str = "utf-8",
     ensure_ascii: bool = False,
-    indent: Union[int, str, None] = 4,
+    indent: int | str | None = 4,
     sort_keys: bool = True,
     **kwargs,
 ) -> None:
@@ -186,10 +175,10 @@ def save_json(
 
     Args:
         file (pathLike): 出力先ファイル。
-        data (Union[dict, list]): 出力するデータ。
+        data (dict | list): 出力するデータ。
         encoding (str, optional): 出力するファイルのエンコード。 Defaults to "utf-8".
         ensure_ascii (bool, optional): json.dumpsのensure_ascii引数。 Defaults to False.
-        indent (Union[int, str, None], optional): json.dumpsのindent引数 Defaults to 4.
+        indent (int | str | None, optional): json.dumpsのindent引数 Defaults to 4.
         sort_keys (bool, optional): json.dumpsのsort_keys引数 Defaults to True.
     """
     file = setup_path(file)

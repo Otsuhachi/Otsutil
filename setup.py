@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-__VERSION__ = "1.0.0"
+__VERSION__ = "1.0.1"
 
 with open("README.md", "r", encoding="utf-8") as f:
     readme = f.read()
@@ -19,5 +19,5 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     license=lcs,
-    python_requires=">=3.7",
+    python_requires=">=3.10",
 )

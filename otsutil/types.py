@@ -10,12 +10,12 @@ __all__ = (
 )
 
 from pathlib import Path
-from typing import Tuple, TypeVar, Union
+from typing import TypeVar
 
 # ジェネリクス
 T = TypeVar("T")
 FLOAT_INT = TypeVar("FLOAT_INT", float, int)
 
 # タイプエイリアス
-hmsValue = Tuple[int, int, float]
-pathLike = Union[Path, str]
+hmsValue = tuple[int, int, float]
+pathLike = Path | str
