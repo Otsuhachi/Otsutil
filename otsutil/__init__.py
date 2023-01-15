@@ -4,6 +4,7 @@
 __all__ = (
     "FLOAT_INT",
     "ObjectSaver",
+    "OtsuNone",
     "T",
     "Timer",
     "deduplicate",
@@ -17,7 +18,7 @@ __all__ = (
     "write_lines",
 )
 
-from .classes import ObjectSaver, Timer
+from .classes import ObjectSaver, OtsuNone, Timer
 from .funcs import (
     deduplicate,
     load_json,
