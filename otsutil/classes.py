@@ -3,6 +3,7 @@
 
 __all__ = (
     "ObjectSaver",
+    "OtsuNone",
     "Timer",
 )
 
@@ -102,6 +103,23 @@ class ObjectSaver:
         新規ファイルでインスタンス生成した場合の初期値はNoneになります。
         """
         return self.__obj
+
+
+class __OtsuNoneType:
+    """Noneが返るのが正常な場合など、異常なNoneを表す場合に使用するクラスです。"""
+
+    __instance = None
+
+    def __new__(cls) -> "__OtsuNoneType":
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    def __repr__(self) -> str:
+        return "OtsuNone"
+
+    def __bool__(self) -> bool:
+        return False
 
 
 class Timer:
@@ -227,3 +245,6 @@ class Timer:
         インスタンス生成時、またはTimer.begin, Timer.resetメソッドを呼び出した場合にこの属性が更新されます。
         """
         return self.__target_time
+
+
+OtsuNone = __OtsuNoneType()
