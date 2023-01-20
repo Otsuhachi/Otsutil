@@ -57,6 +57,8 @@ class ObjectSaver:
         Returns:
             Any: 復元されたオブジェクト。
         """
+        if not pickle_str:
+            return None
         stb = base64.b64decode(pickle_str.encode())
         return pickle.loads(stb)
 
