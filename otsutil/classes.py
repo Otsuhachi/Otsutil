@@ -13,17 +13,17 @@ import pickle
 import time
 
 from datetime import datetime, timedelta
-from typing import Any, Iterator
+from typing import Generic, Iterator
 
 from .funcs import setup_path
-from .types import hmsValue, pathLike
+from .types import T, hmsValue, pathLike
 
 
-class ObjectSaver:
+class ObjectSaver(Generic[T]):
     """オブジェクトを保存するファイルを扱うクラスです。
 
     Properties:
-        obj (Any): ファイルに保存されているオブジェクト。
+        obj (T | None): ファイルに保存されているオブジェクト。
     """
 
     def __init__(self, file: pathLike) -> None:
@@ -35,11 +35,11 @@ class ObjectSaver:
         self.__obj = obj
 
     @staticmethod
-    def dumps(obj: Any) -> str:
+    def dumps(obj: T | None) -> str:
         """オブジェクトのpickle文字列を返します。
 
         Args:
-            obj (Any): pickle文字列を取得したいオブジェクト。
+            obj (T | None): pickle文字列を取得したいオブジェクト。
 
         Returns:
             str: pickle文字列。
@@ -48,27 +48,27 @@ class ObjectSaver:
         return base64.b64encode(otb).decode("utf-8")
 
     @staticmethod
-    def loads(pickle_str: str) -> Any:
+    def loads(pickle_str: str) -> T | None:
         """pickle文字列をオブジェクト化します。
 
         Args:
             pickle_str (str): pickle文字列。
 
         Returns:
-            Any: 復元されたオブジェクト。
+            T | None: 復元されたオブジェクト。
         """
         if not pickle_str:
             return None
         stb = base64.b64decode(pickle_str.encode())
         return pickle.loads(stb)
 
-    def load_file(self) -> Any:
+    def load_file(self) -> T | None:
         """ファイルに保存されているデータを読み込み、取得します。
 
         ファイルが存在しなかった場合にはNoneを保存したファイルを生成し、Noneを返します。
 
         Returns:
-            Any: ファイルに保存されていたオブジェクト。
+            T | None: ファイルに保存されていたオブジェクト。
         """
         file = self.__file
         if file.exists():
@@ -78,13 +78,13 @@ class ObjectSaver:
             self.save_file(None)
         return None
 
-    def save_file(self, obj: Any) -> bool:
+    def save_file(self, obj: T | None) -> bool:
         """ファイルにobjを保存し、成否を返します。
 
         また、obj属性を更新します。
 
         Args:
-            obj (Any): 保存したいオブジェクト。
+            obj (T | None): 保存したいオブジェクト。
 
         Returns:
             bool: 保存の成否。
@@ -99,7 +99,7 @@ class ObjectSaver:
             return False
 
     @property
-    def obj(self) -> Any:
+    def obj(self) -> T | None:
         """ファイルに保存されているオブジェクト。
 
         新規ファイルでインスタンス生成した場合の初期値はNoneになります。
