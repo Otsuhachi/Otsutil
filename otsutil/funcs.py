@@ -5,6 +5,7 @@ __all__ = (
     "deduplicate",
     "load_json",
     "read_lines",
+    "same_path",
     "save_json",
     "setup_path",
     "str_to_path",
@@ -158,6 +159,21 @@ def read_lines(file: pathLike, ignore_blank_line: bool = False, encoding: str = 
             gen = filter(lambda x: x.strip(), gen)
         for line in gen:
             yield line
+
+
+def same_path(p1: pathLike, p2: pathLike) -> bool:
+    """二つのパスが同一か判定します。
+
+    Args:
+        p1 (pathLike): パス1。
+        p2 (pathLike): パス2。
+
+    Returns:
+        bool: パス1とパス2が同一か。
+    """
+    p1 = str_to_path(p1)
+    p2 = str_to_path(p2)
+    return p1.resolve() == p2.resolve()
 
 
 def save_json(

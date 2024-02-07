@@ -2,25 +2,130 @@
 """
 
 __all__ = (
+    "LockableDict",
+    "LockableList",
     "ObjectSaver",
     "OtsuNone",
     "Timer",
 )
-
-
 import base64
 import pickle
 import time
 
+from collections.abc import Iterator
 from datetime import datetime, timedelta
-from typing import Generic, Iterator
+from threading import Lock
+from typing import Callable, Generic, Iterator
 
 from .funcs import setup_path
-from .types import T, hmsValue, pathLike
+from .types import K, P, R, T, V, hmsValue, pathLike
+
+
+class __OtsuNoneType:
+    """Noneが返るのが正常な場合など、異常なNoneを表す場合に使用するクラス。"""
+
+    __instance = None
+
+    def __new__(cls) -> "__OtsuNoneType":
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    def __repr__(self) -> str:
+        return "OtsuNone"
+
+    def __bool__(self) -> bool:
+        return False
+
+
+OtsuNone = __OtsuNoneType()
+
+
+class LockableDict(dict[K, V]):
+    """要素の操作時にthreading.Lockを使用するdictクラス。"""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.__lock = Lock()
+        attrs = (
+            "clear",
+            "copy",
+            "fromkeys",
+            "get",
+            "items",
+            "keys",
+            "pop",
+            "popitem",
+            "setdefault",
+            "update",
+            "values",
+        )
+        for attr in attrs:
+            if (value := getattr(self, attr, None)) is not None:
+                setattr(self, attr, self.with_lock(value))
+
+    def __delitem__(self, __key: K) -> None:
+        with self.__lock:
+            res = super().__delitem__(__key)
+            return res
+
+    def __getitem__(self, __key: K) -> V:
+        with self.__lock:
+            res = super().__getitem__(__key)
+            return res
+
+    def __setitem__(self, __key: K, __value: V) -> None:
+        with self.__lock:
+            res = super().__setitem__(__key, __value)
+            return res
+
+    def with_lock(self, f: Callable[P, R]) -> Callable[P, R]:
+
+        def _(*args: P.args, **kwargs: P.kwargs) -> R:
+            print(f"Lock {f.__name__}")
+            with self.__lock:
+                res = f(*args, **kwargs)
+                print(f"Release {f.__name__}")
+                return res
+
+        return _
+
+
+class LockableList(list[V]):
+    """要素の操作時にthreading.Lockを使用するlistクラス。"""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.__lock = Lock()
+        attrs = (
+            "append",
+            "clear",
+            "copy",
+            "count",
+            "extend",
+            "index",
+            "insert",
+            "pop",
+            "remove",
+            "reverse",
+            "sort",
+        )
+        for attr in attrs:
+            if (value := getattr(self, attr, None)) is not None:
+                setattr(self, attr, self.with_lock(value))
+
+    def with_lock(self, f: Callable[P, R]) -> Callable[P, R]:
+
+        def _(*args: P.args, **kwargs: P.kwargs) -> R:
+            with self.__lock:
+                res = f(*args, **kwargs)
+            return res
+
+        return _
 
 
 class ObjectSaver(Generic[T]):
-    """オブジェクトを保存するファイルを扱うクラスです。
+    """オブジェクトを保存するファイルを扱うクラス。
 
     Properties:
         obj (T | None): ファイルに保存されているオブジェクト。
@@ -107,25 +212,8 @@ class ObjectSaver(Generic[T]):
         return self.__obj
 
 
-class __OtsuNoneType:
-    """Noneが返るのが正常な場合など、異常なNoneを表す場合に使用するクラスです。"""
-
-    __instance = None
-
-    def __new__(cls) -> "__OtsuNoneType":
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        return cls.__instance
-
-    def __repr__(self) -> str:
-        return "OtsuNone"
-
-    def __bool__(self) -> bool:
-        return False
-
-
 class Timer:
-    """指定時間が経過したかを判定したり指定時間秒処理を停止させるタイマーのクラスです。
+    """指定時間が経過したかを判定したり指定時間秒処理を停止させるタイマーのクラス。
 
     Properties:
         delta (timedelta): インスタンスの基準待機時間です。
@@ -247,6 +335,3 @@ class Timer:
         インスタンス生成時、またはTimer.begin, Timer.resetメソッドを呼び出した場合にこの属性が更新されます。
         """
         return self.__target_time
-
-
-OtsuNone = __OtsuNoneType()
