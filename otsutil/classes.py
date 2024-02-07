@@ -82,10 +82,8 @@ class LockableDict(dict[K, V]):
     def with_lock(self, f: Callable[P, R]) -> Callable[P, R]:
 
         def _(*args: P.args, **kwargs: P.kwargs) -> R:
-            print(f"Lock {f.__name__}")
             with self.__lock:
                 res = f(*args, **kwargs)
-                print(f"Release {f.__name__}")
                 return res
 
         return _
