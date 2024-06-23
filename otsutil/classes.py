@@ -12,7 +12,6 @@ import base64
 import pickle
 import time
 
-from collections.abc import Iterator
 from datetime import datetime, timedelta
 from threading import Lock
 from typing import Callable, Generic, Iterator

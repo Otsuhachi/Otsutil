@@ -17,7 +17,7 @@ import json
 
 from collections import deque
 from pathlib import Path
-from typing import Iterable, Iterator, Sequence, overload
+from typing import Any, Callable, Iterable, Iterator, Sequence, TypeGuard, overload
 
 from .types import T, pathLike
 
@@ -101,6 +101,89 @@ def deduplicate(values: Sequence[T]) -> Sequence[T]:
     elif type(values) is deque:
         res = deque(res)
     return res
+
+
+def get_value(
+    data: dict,
+    key: Any,
+    type_: type[T],
+    factory: Callable[[], T] | None = None,
+    set_none_on_exception: bool = True,
+) -> T | None:
+    """辞書から値を取得します。
+
+    値が存在しない場合は生成して辞書に登録し、返します。
+
+    Args:
+        data (dict): 取得元の辞書。
+        key (Any): 取得するキー。
+        type_ (type[T]): 取得する値の型。
+        factory (Callable[[], T] | None, optional): 値がなかった時の生成用関数。 Defaults to None.
+        set_none_on_exception (bool, optional): 型チェックに通らなかったときNoneによる上書きを許可する。 Defaults to True.
+
+    Raises:
+        TypeError: 取得した値がtype_ではないと判定された場合。
+
+    Returns:
+        T | None: 値。
+    """
+    if define := key in data:
+        res = data[key]
+    else:
+        if factory is None:
+            f = type_
+        else:
+            f = factory
+        try:
+            res = f()
+        except:
+            res = None
+    if not (is_type(res, type_) or is_type(res, type_, True)):
+        if set_none_on_exception:
+            data[key] = None
+            return None
+        msg = f"{key}で取得した値は{type_}型ではありませんでした。({res})"
+        raise TypeError(msg)
+    if not define:
+        data[key] = res
+    return res
+
+
+def is_all_type(seq: Sequence[Any], type_: type[T], use_isinstance: bool = False) -> TypeGuard[Sequence[T]]:
+    """シーケンスの値すべてに対して型判定を行います。
+
+    Args:
+        seq (Sequence[Any]): 対象シーケンス。
+        type_ (type[T]): 型。
+        use_isinstance (bool, optional): isinstanceを使用して判定するか。 Defaults to False.
+
+    Returns:
+        TypeGuard[Sequence[T]]: 型保障。
+    """
+    return all(map(lambda x: is_type(x, type_, use_isinstance), seq))
+
+
+def is_type(obj: Any, type_: type[T], use_isinstance: bool = False) -> TypeGuard[T]:
+    """型判定を行います。
+
+    Args:
+        obj (Any): 対象のオブジェクト。
+        type_ (type[T]): 型。
+        use_isinstance (bool, optional): isinstanceを使用して判定するか。 Defaults to False.
+
+    Returns:
+        TypeGuard[T]: 型保障。
+
+    Note:
+        use_isinstanceオプションによる型判定の違いは以下の通りです。
+            True: isinstance(obj, type_)
+            False: type(obj) is type_
+    """
+    if use_isinstance:
+        f = lambda x: isinstance(x, type_)
+    else:
+        f = lambda x: type(x) is type_
+    return f(obj)
 
 
 def load_json(file: pathLike, encoding: str = "utf-8", **kwargs) -> dict | list:

@@ -27,6 +27,9 @@ __all__ = (
 from .classes import LockableDict, LockableList, ObjectSaver, OtsuNone, Timer
 from .funcs import (
     deduplicate,
+    get_value,
+    is_all_type,
+    is_type,
     load_json,
     read_lines,
     same_path,
