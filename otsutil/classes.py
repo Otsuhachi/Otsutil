@@ -1,5 +1,4 @@
-"""よく使うクラスを纏めたモジュールです。
-"""
+"""よく使うクラスを纏めたモジュールです。"""
 
 __all__ = (
     "LockableDict",
@@ -8,27 +7,22 @@ __all__ = (
     "OtsuNone",
     "Timer",
 )
+
+
 import base64
 import pickle
 import time
-
+from collections.abc import Callable, Iterator
 from datetime import datetime, timedelta
 from threading import Lock
-from typing import Callable, Generic, Iterator
+from typing import Any
 
 from .funcs import setup_path
-from .types import K, P, R, T, V, hmsValue, pathLike
+from .types import hmsValue, pathLike
 
 
 class __OtsuNoneType:
-    """Noneが返るのが正常な場合など、異常なNoneを表す場合に使用するクラス。"""
-
-    __instance = None
-
-    def __new__(cls) -> "__OtsuNoneType":
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        return cls.__instance
+    """異常な None を表すためのセンチネルクラス。"""
 
     def __repr__(self) -> str:
         return "OtsuNone"
@@ -37,15 +31,15 @@ class __OtsuNoneType:
         return False
 
 
-OtsuNone = __OtsuNoneType()
+OtsuNone: Any = __OtsuNoneType()
 
 
-class LockableDict(dict[K, V]):
-    """要素の操作時にthreading.Lockを使用するdictクラス。"""
-
-    def __init__(self, *args, **kwargs) -> None:
+class LockableDict[K, V](dict[K, V]):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.__lock = Lock()
+        self._lock = Lock()
+
+        # 動的にロックを適用するメソッド群
         attrs = (
             "clear",
             "copy",
@@ -60,40 +54,37 @@ class LockableDict(dict[K, V]):
             "values",
         )
         for attr in attrs:
-            if (value := getattr(self, attr, None)) is not None:
-                setattr(self, attr, self.with_lock(value))
+            if (original_method := getattr(self, attr, None)) is not None:
+                setattr(self, attr, self._with_lock(original_method))
 
-    def __delitem__(self, __key: K) -> None:
-        with self.__lock:
-            res = super().__delitem__(__key)
-            return res
+    def __delitem__(self, key: K) -> None:
+        with self._lock:
+            super().__delitem__(key)
 
-    def __getitem__(self, __key: K) -> V:
-        with self.__lock:
-            res = super().__getitem__(__key)
-            return res
+    def __getitem__(self, key: K) -> V:
+        with self._lock:
+            return super().__getitem__(key)
 
-    def __setitem__(self, __key: K, __value: V) -> None:
-        with self.__lock:
-            res = super().__setitem__(__key, __value)
-            return res
+    def __setitem__(self, key: K, value: V) -> None:
+        with self._lock:
+            return super().__setitem__(key, value)
 
-    def with_lock(self, f: Callable[P, R]) -> Callable[P, R]:
+    def _with_lock[**P, R](self, f: Callable[P, R]) -> Callable[P, R]:
+        """メソッドをロックでラップします。"""
 
-        def _(*args: P.args, **kwargs: P.kwargs) -> R:
-            with self.__lock:
-                res = f(*args, **kwargs)
-                return res
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            with self._lock:
+                return f(*args, **kwargs)
 
-        return _
+        return wrapper
 
 
-class LockableList(list[V]):
-    """要素の操作時にthreading.Lockを使用するlistクラス。"""
+class LockableList[V](list[V]):
+    """要素の操作時に threading.Lock を使用する list クラス。"""
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.__lock = Lock()
+        self._lock = Lock()
         attrs = (
             "append",
             "clear",
@@ -108,227 +99,197 @@ class LockableList(list[V]):
             "sort",
         )
         for attr in attrs:
-            if (value := getattr(self, attr, None)) is not None:
-                setattr(self, attr, self.with_lock(value))
+            if (original_method := getattr(self, attr, None)) is not None:
+                setattr(self, attr, self._with_lock(original_method))
 
-    def with_lock(self, f: Callable[P, R]) -> Callable[P, R]:
+    def _with_lock[**P, R](self, f: Callable[P, R]) -> Callable[P, R]:
+        """メソッドをロックでラップします。"""
 
-        def _(*args: P.args, **kwargs: P.kwargs) -> R:
-            with self.__lock:
-                res = f(*args, **kwargs)
-            return res
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            with self._lock:
+                return f(*args, **kwargs)
 
-        return _
+        return wrapper
 
 
-class ObjectSaver(Generic[T]):
-    """オブジェクトを保存するファイルを扱うクラス。
+class ObjectSaver[T]:
+    """オブジェクトを pickle 化してファイルに保存するクラス。
 
-    Properties:
-        obj (T | None): ファイルに保存されているオブジェクト。
+    特殊な変換が必要なクラスを保存する場合は、対象のクラスで `__reduce__`
+    メソッドを実装することで、リスト内の要素などを含め自動的にカスタム
+    シリアライズが適用されます。
+
+    Attributes:
+        obj (T | None): 保存されているオブジェクト。
     """
 
     def __init__(self, file: pathLike) -> None:
-        self.__file = setup_path(file)
-        if self.__file.exists():
-            obj = self.load_file()
-        else:
-            obj = None
-        self.__obj = obj
-
-    @staticmethod
-    def dumps(obj: T | None) -> str:
-        """オブジェクトのpickle文字列を返します。
+        """ObjectSaver を初期化します。
 
         Args:
-            obj (T | None): pickle文字列を取得したいオブジェクト。
-
-        Returns:
-            str: pickle文字列。
+            file (pathLike): 保存先のファイルパス。
         """
-        otb = pickle.dumps(obj, protocol=4)
-        return base64.b64encode(otb).decode("utf-8")
+        self._file = setup_path(file)
+        self._obj: T | None = self.load_file() if self._file.exists() else None
 
     @staticmethod
-    def loads(pickle_str: str) -> T | None:
-        """pickle文字列をオブジェクト化します。
+    def dumps(obj: Any) -> str:  # noqa: ANN401
+        """オブジェクトを base64 エンコードされた pickle 文字列に変換します。
 
         Args:
-            pickle_str (str): pickle文字列。
+            obj (Any): 変換対象のオブジェクト。
 
         Returns:
-            T | None: 復元されたオブジェクト。
+            str: base64 文字列。
+        """
+        data = pickle.dumps(obj, protocol=4)
+        return base64.b64encode(data).decode("utf-8")
+
+    @staticmethod
+    def loads(pickle_str: str) -> Any:  # noqa: ANN401
+        """base64 文字列をオブジェクトに復元します。
+
+        Args:
+            pickle_str (str): base64 文字列。
+
+        Returns:
+            Any: 復元されたオブジェクト。文字列が空の場合は None。
         """
         if not pickle_str:
             return None
-        stb = base64.b64decode(pickle_str.encode())
-        return pickle.loads(stb)
+        data = base64.b64decode(pickle_str.encode())
+        return pickle.loads(data)
 
     def load_file(self) -> T | None:
-        """ファイルに保存されているデータを読み込み、取得します。
-
-        ファイルが存在しなかった場合にはNoneを保存したファイルを生成し、Noneを返します。
+        """ファイルからオブジェクトを読み込みます。
 
         Returns:
-            T | None: ファイルに保存されていたオブジェクト。
+            T | None: 読み込まれたオブジェクト。ファイルがない場合は None。
         """
-        file = self.__file
-        if file.exists():
-            with file.open("r", encoding="utf-8") as f:
+        if self._file.exists():
+            with self._file.open("r", encoding="utf-8") as f:
                 return self.loads(f.read())
-        else:
-            self.save_file(None)
+        self.save_file(None)
         return None
 
     def save_file(self, obj: T | None) -> bool:
-        """ファイルにobjを保存し、成否を返します。
-
-        また、obj属性を更新します。
+        """オブジェクトをファイルに保存します。
 
         Args:
-            obj (T | None): 保存したいオブジェクト。
+            obj (T | None): 保存するオブジェクト。
 
         Returns:
-            bool: 保存の成否。
+            bool: 保存に成功した場合は True。
         """
         try:
-            bts = self.dumps(obj)
-            with self.__file.open("w", encoding="utf-8") as f:
-                f.write(bts)
-            self.__obj = obj
+            content = self.dumps(obj)
+            with self._file.open("w", encoding="utf-8") as f:
+                f.write(content)
+            self._obj = obj
             return True
-        except:
+        except Exception:
             return False
 
     @property
     def obj(self) -> T | None:
-        """ファイルに保存されているオブジェクト。
-
-        新規ファイルでインスタンス生成した場合の初期値はNoneになります。
-        """
-        return self.__obj
+        """現在保持されているオブジェクト。"""
+        return self._obj
 
 
 class Timer:
-    """指定時間が経過したかを判定したり指定時間秒処理を停止させるタイマーのクラス。
+    """指定時間の経過判定および待機を行うタイマー。"""
 
-    Properties:
-        delta (timedelta): インスタンスの基準待機時間です。
-        start_time (datetime): タイマーを開始した時刻です。
-        target_time (datetime): タイマーを終了する時刻です。
-    """
-
-    def __init__(self, hours: int = 0, minutes: int = 0, seconds: float = 0) -> None:
-        """h時間m分s秒を測るタイマーインスタンスを生成します。
+    def __init__(
+        self,
+        hours: int = 0,
+        minutes: int = 0,
+        seconds: float = 0,
+    ) -> None:
+        """Timer を初期化します。
 
         Args:
-            hours (int, optional): h時間 Defaults to 0.
-            minutes (int, optional): m分。 Defaults to 0.
-            seconds (float, optional): s秒。 Defaults to 0.
+            hours (int): 時間。 Defaults to 0.
+            minutes (int): 分。 Defaults to 0.
+            seconds (float): 秒。 Defaults to 0.
 
         Raises:
-            ValueError: マイナス秒になるような時間が指定されている場合に投げられます。
+            ValueError: 指定された時間が 0 秒未満の場合。
         """
         delta = timedelta(hours=hours, minutes=minutes, seconds=seconds)
-        if delta < timedelta(seconds=0):
-            msg = f"0秒未満のTimerインスタンスを生成することはできません。 ({delta.total_seconds():0.2f}秒)"
+        if delta < timedelta(0):
+            msg = f"０秒未満のタイマーは作成できません: {delta.total_seconds()}s"
             raise ValueError(msg)
-        self.__delta = delta
+        self._delta = delta
         self.reset()
 
     def __bool__(self) -> bool:
+        """タイマーが稼働中（終了時刻に達していない）か。"""
         return self.target_time > datetime.now()
 
+    def __repr__(self) -> str:
+        return f"Timer(delta={self.delta.total_seconds()}s, target={self.target_time})"
+
     def __str__(self) -> str:
-        hms = self.calc_hms(self.delta.total_seconds())
-        res = []
-        for i, s in zip(hms, ("時間", "分", "秒")):
-            if i > 0:
-                res.append(f"{i}{s}")
-        return "".join(res) + "のタイマーです。"
+        h, m, s = self.calc_hms(self.delta.total_seconds())
+        parts = []
+        if h > 0:
+            parts.append(f"{h}時間")
+        if m > 0:
+            parts.append(f"{m}分")
+        if s > 0:
+            parts.append(f"{s}秒")
+        return "".join(parts) + "のタイマー"
 
     @staticmethod
     def calc_hms(seconds: float) -> hmsValue:
-        """秒数から時分秒のタプルを返します。
-
-        Args:
-            seconds (float): 秒数。
-
-        Returns:
-            hmsValue: 時分秒のタプル。
-        """
+        """秒数を (時, 分, 秒) に変換します。"""
         m, s = divmod(seconds, 60)
         h, m = divmod(m, 60)
-        h, m = map(int, (h, m))
-        return (h, m, s)
+        return (int(h), int(m), s)
 
     def begin(self, span_seconds: float = 0) -> None:
-        """現在から指定時間秒待機します。
-
-        Args:
-            span_seconds (float, optional): 待機終了を確認する頻度秒。 Defaults to 0.
-        """
+        """タイマーをリセットして待機を開始します。"""
         self.reset()
         self.join(span_seconds)
 
     def join(self, span_seconds: float = 0) -> None:
-        """開始時刻から指定時間秒経過するまで待機します。
-
-        Timer.beginと違い、インスタンス生成やTimer.resetからの経過時間に応じて待機時間が減少します。
+        """終了時刻までスレッドをブロックします。
 
         Args:
-            span_seconds (float, optional): 待機終了を確認する頻度秒。 Defaults to 0.
+            span_seconds (float): 終了判定を行う間隔（秒）。 Defaults to 0.
         """
-        span = min(0, span_seconds)
+        span = max(0.0, span_seconds)
         while self:
             time.sleep(span)
 
     def reset(self) -> None:
-        """タイマーの開始時刻をリセットし、終了時刻を更新します。"""
-        self.__start_time = datetime.now()
-        self.__target_time = self.start_time + self.delta
+        """開始時刻を現在に更新します。"""
+        self._start_time = datetime.now()
+        self._target_time = self._start_time + self._delta
 
     def wiggle_begin(self) -> Iterator[hmsValue]:
-        """待機時間を確認後に処理を挟むことのできるTimer.beginです。
-
-        for文などと合わせて使うことができます。
-
-        Yields:
-            Iterator[hmsValue]: 指定時刻までの残り時分秒のタプル。
-        """
+        """リセットして残り時間を yield するイテレータ。"""
         self.reset()
         yield from self.wiggle_join()
 
     def wiggle_join(self) -> Iterator[hmsValue]:
-        """待機時間を確認後に処理を挟むことのできるTimer.joinです。
-
-        for文などと合わせて使うことができます。
+        """終了まで残り時間を yield し続けるイテレータ。
 
         Yields:
-            Iterator[hmsValue]: 指定時刻までの残り時分秒のタプル。
+            Iterator[hmsValue]: (時, 分, 秒) のタプル。
         """
         while self:
-            delta = self.target_time - datetime.now()
-            yield self.calc_hms(delta.total_seconds())
+            diff = self.target_time - datetime.now()
+            yield self.calc_hms(max(0, diff.total_seconds()))
 
     @property
     def delta(self) -> timedelta:
-        """インスタンスの基準待機時間です。"""
-        return self.__delta
+        return self._delta
 
     @property
     def start_time(self) -> datetime:
-        """タイマーを開始した時刻です。
-
-        この時刻を基準にdelta秒経過したかを判定します。
-        インスタンス生成時、またはTimer.begin, Timer.resetメソッドを呼び出した場合にこの属性が更新されます。
-        """
-        return self.__start_time
+        return self._start_time
 
     @property
     def target_time(self) -> datetime:
-        """タイマーを終了する時刻です。
-
-        インスタンス生成時、またはTimer.begin, Timer.resetメソッドを呼び出した場合にこの属性が更新されます。
-        """
-        return self.__target_time
+        return self._target_time
