@@ -1,14 +1,14 @@
 """よく使う型ヒントや定義を纏めたモジュールです。"""
 
 __all__ = (
-    "FLOAT_INT",
+    "FloatInt",
     "K",
     "P",
     "R",
     "T",
     "V",
-    "hmsValue",
-    "pathLike",
+    "HMSTuple",
+    "StrPath",
 )
 
 
@@ -16,11 +16,11 @@ from pathlib import Path
 from typing import ParamSpec, TypeVar
 
 # タイプエイリアス
-type hmsValue = tuple[int, int, float]
-type pathLike = Path | str
+type HMSTuple = tuple[int, int, float]
+type StrPath = Path | str
 
 # ジェネリクス
-type FLOAT_INT = float | int
+type FloatInt = float | int
 
 P = ParamSpec("P")
 R = TypeVar("R")

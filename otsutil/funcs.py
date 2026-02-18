@@ -2,6 +2,8 @@
 
 __all__ = (
     "deduplicate",
+    "ensure_relative",
+    "get_sub_paths",
     "get_value",
     "is_all_type",
     "is_type",
@@ -15,13 +17,14 @@ __all__ = (
 )
 
 
+import fnmatch
 import json
 from collections import deque
 from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
 from pathlib import Path
 from typing import Any, TypeGuard, overload
 
-from otsutil.types import pathLike
+from .types import StrPath
 
 
 @overload
@@ -92,7 +95,9 @@ def get_value[T](
         except Exception:
             res = None
 
-    is_valid = is_type(res, type_, use_isinstance=False) or is_type(res, type_, use_isinstance=True)
+    is_valid = is_type(res, type_, use_isinstance=False) or is_type(
+        res, type_, use_isinstance=True
+    )
     if not is_valid:
         if set_none_on_exception:
             data[key] = None
@@ -146,14 +151,14 @@ def is_type[T](
 
 
 def load_json(
-    file: pathLike,
+    file: StrPath,
     encoding: str = "utf-8",
     **kwargs: Any,
 ) -> dict[Any, Any] | list[Any]:
     """JSON形式のファイルを読み込みます。
 
     Args:
-        file (pathLike): 読み込むJSONファイルのパス。
+        file (StrPath): 読み込むJSONファイルのパス。
         encoding (str, optional): ファイルのエンコーディング。 Defaults to "utf-8".
         **kwargs (Any): json.load に渡される追加のキーワード引数。
 
@@ -173,7 +178,7 @@ def load_json(
 
 
 def read_lines(
-    file: pathLike,
+    file: StrPath,
     ignore_blank_line: bool = False,
     encoding: str = "utf-8",
     **kwargs: Any,
@@ -183,7 +188,7 @@ def read_lines(
     各行の右端にある改行コードは自動的に除去されます。
 
     Args:
-        file (pathLike): 読み込むファイルのパス。
+        file (StrPath): 読み込むファイルのパス。
         ignore_blank_line (bool, optional): 空白行（stripして空になる行）を無視するかどうか。
             Defaults to False.
         encoding (str, optional): ファイルのエンコーディング。 Defaults to "utf-8".
@@ -210,12 +215,12 @@ def read_lines(
         yield from gen
 
 
-def same_path(p1: pathLike, p2: pathLike) -> bool:
+def same_path(p1: StrPath, p2: StrPath) -> bool:
     """2つのパスが実体として同一かどうかを判定します。
 
     Args:
-        p1 (pathLike): 比較するパス1。
-        p2 (pathLike): 比較するパス2。
+        p1 (StrPath): 比較するパス1。
+        p2 (StrPath): 比較するパス2。
 
     Returns:
         bool: 同一のパスであれば True、そうでなければ False。
@@ -224,7 +229,7 @@ def same_path(p1: pathLike, p2: pathLike) -> bool:
 
 
 def save_json(
-    file: pathLike,
+    file: StrPath,
     data: dict[Any, Any] | list[Any],
     encoding: str = "utf-8",
     ensure_ascii: bool = False,
@@ -235,7 +240,7 @@ def save_json(
     """指定したファイルにデータをJSON形式で書き出します。
 
     Args:
-        file (pathLike): 出力先のファイルパス。
+        file (StrPath): 出力先のファイルパス。
         data (dict[Any, Any] | list[Any]): 書き出すデータ。
         encoding (str, optional): ファイルのエンコーディング。 Defaults to "utf-8".
         ensure_ascii (bool, optional): json.dump の ensure_ascii 引数。 Defaults to False.
@@ -253,11 +258,97 @@ def save_json(
         json.dump(**kwargs)
 
 
-def setup_path(path: pathLike, is_dir: bool = False) -> Path:
+def ensure_relative(path: StrPath, base: StrPath) -> Path:
+    """パスを基準ディレクトリからの相対パスに変換します。
+
+    絶対パスが渡された場合、基準ディレクトリからの相対パスに解決します。
+    既に相対パスである場合はそのまま Path オブジェクトとして返します。
+    基準ディレクトリの外にある絶対パスが渡された場合、解決不能として ValueError を投げることがあります。
+
+    Args:
+        path (StrPath): 変換対象のパス。
+        base (StrPath): 基準となるディレクトリのパス。
+
+    Returns:
+        Path: 相対パス化された Path オブジェクト。
+    """
+    p = str_to_path(path)
+    if not p.is_absolute():
+        return p
+    return p.relative_to(str_to_path(base).resolve())
+
+
+def get_sub_paths(
+    root: StrPath,
+    recursive: bool = True,
+    include_exts: list[str] | None = None,
+    include_names: list[str] | None = None,
+    exclude_names: list[str] | None = None,
+    only_file: bool = False,
+    only_dir: bool = False,
+) -> list[Path]:
+    """ディレクトリ内の子パスをフィルタリングして一括取得します。
+
+    Args:
+        root (StrPath): 探索先のルートディレクトリ。
+        recursive (bool, optional): 再帰的に探索するかどうか。 Defaults to True.
+        include_exts (list[str] | None, optional): 抽出する拡張子のリスト（例: [".py"]）。
+            内部的には include_names のショートカットとして機能します。 Defaults to None.
+        include_names (list[str] | None, optional): 抽出する名前のパターン（ワイルドカード可）。 Defaults to None.
+        exclude_names (list[str] | None, optional): 除外する名前のパターン（ワイルドカード可）。 Defaults to None.
+        only_file (bool, optional): ファイルのみを抽出するか。 Defaults to False.
+        only_dir (bool, optional): ディレクトリのみを抽出するか。 Defaults to False.
+
+    Returns:
+        list[Path]: 抽出されたパスのリスト。
+
+    Raises:
+        NotADirectoryError: 指定された root がディレクトリでない場合に投げられます。
+    """
+    root_path = str_to_path(root)
+    if not root_path.is_dir():
+        msg = f"{root_path}はディレクトリではないか、存在しません。"
+        raise NotADirectoryError(msg)
+
+    pattern = "**/*" if recursive else "*"
+    all_paths = root_path.glob(pattern)
+
+    # フィルタロジックの構築と正規化
+    i_names = set(include_names or [])
+    if include_exts:
+        for ext in include_exts:
+            # ".txt", "txt", "*.txt" をすべて "*.txt" に正規化
+            clean_ext = ext.removeprefix("*").removeprefix(".")
+            i_names.add(f"*.{clean_ext}")
+
+    e_names = set(exclude_names or [])
+
+    res = []
+    for p in all_paths:
+        if only_file and not p.is_file():
+            continue
+        if only_dir and not p.is_dir():
+            continue
+
+        name = p.name
+        # 包含フィルタ（一つでも一致すれば通過）
+        if i_names and not any(fnmatch.fnmatch(name, pat) for pat in i_names):
+            continue
+        # 除外フィルタ（一つでも一致すれば脱落）
+        # 包含フィルタを通過した後でも、除外にヒットすれば追加されません。
+        if e_names and any(fnmatch.fnmatch(name, pat) for pat in e_names):
+            continue
+
+        res.append(p)
+
+    return res
+
+
+def setup_path(path: StrPath, is_dir: bool = False) -> Path:
     """親ディレクトリの存在を保証し、Pathオブジェクトを返します。
 
     Args:
-        path (pathLike): セットアップしたいパス。
+        path (StrPath): セットアップしたいパス。
         is_dir (bool, optional): 指定したパス自体をディレクトリとして作成するかどうか。
             False の場合はその親ディレクトリを作成します。 Defaults to False.
 
@@ -271,11 +362,11 @@ def setup_path(path: pathLike, is_dir: bool = False) -> Path:
     return p
 
 
-def str_to_path(path: pathLike) -> Path:
+def str_to_path(path: StrPath) -> Path:
     """パス（文字列またはPath）をPathオブジェクトに変換します。
 
     Args:
-        path (pathLike): 変換対象のパス。
+        path (StrPath): 変換対象のパス。
 
     Returns:
         Path: Pathオブジェクト。
@@ -284,7 +375,7 @@ def str_to_path(path: pathLike) -> Path:
 
 
 def write_lines(
-    file: pathLike,
+    file: StrPath,
     lines: Iterable[Any],
     add_blank_line: bool = False,
     encoding: str = "utf-8",
@@ -293,7 +384,7 @@ def write_lines(
     """ファイルにIterableの各要素を1行ずつ書き出します。
 
     Args:
-        file (pathLike): 出力先のファイルパス。
+        file (StrPath): 出力先のファイルパス。
         lines (Iterable[Any]): 書き出す内容のイテラブル。各要素は str に変換されます。
         add_blank_line (bool, optional): ファイルの末尾を空白行で終わらせるかどうか。
             Defaults to False.

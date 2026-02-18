@@ -8,12 +8,14 @@ otsutil - 汎用的なユーティリティパッケージ
 from .classes import (
     LockableDict,
     LockableList,
-    ObjectSaver,
+    ObjectStore,
     OtsuNone,
     Timer,
 )
 from .funcs import (
     deduplicate,
+    ensure_relative,
+    get_sub_paths,
     get_value,
     is_all_type,
     is_type,
@@ -26,22 +28,22 @@ from .funcs import (
     write_lines,
 )
 from .types import (
-    FLOAT_INT,
+    FloatInt,
+    HMSTuple,
     K,
     P,
     R,
+    StrPath,
     T,
     V,
-    hmsValue,
-    pathLike,
 )
 
 __all__ = (
-    "FLOAT_INT",
+    "FloatInt",
     "K",
     "LockableDict",
     "LockableList",
-    "ObjectSaver",
+    "ObjectStore",
     "OtsuNone",
     "P",
     "R",
@@ -49,12 +51,14 @@ __all__ = (
     "Timer",
     "V",
     "deduplicate",
+    "ensure_relative",
+    "get_sub_paths",
     "get_value",
-    "hmsValue",
+    "HMSTuple",
     "is_all_type",
     "is_type",
     "load_json",
-    "pathLike",
+    "StrPath",
     "read_lines",
     "same_path",
     "save_json",
@@ -62,4 +66,4 @@ __all__ = (
     "str_to_path",
     "write_lines",
 )
-__version__ = "1.2.3.312"
+__version__ = "1.3.0.312"
