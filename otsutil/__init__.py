@@ -39,7 +39,7 @@ __all__ = [
 ]
 
 
-__VERSION__ = "1.3.1.312"
+__VERSION__ = "1.3.2.312"
 
 from .cfg import JST
 from .classes import LockableDict, LockableList, ObjectStore, OtsuNone, Timer

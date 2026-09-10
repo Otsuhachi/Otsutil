@@ -24,7 +24,7 @@ import json
 from collections import deque
 from collections.abc import Collection, Iterable, Iterator, Sequence
 from pathlib import Path
-from typing import Literal, Never, TypeGuard, overload
+from typing import Any, Literal, Never, TypeGuard, overload
 
 from .exceptions import PathTypeError
 from .types import ExpectType, OptPath, OptStrPath, StrPath
@@ -129,42 +129,42 @@ def get_sub_paths(
 
 
 @overload
-def is_all_type[T](itr: deque[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[deque[T]]: ...
+def is_all_type[T](itr: deque[Any], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[deque[T]]: ...
 
 
 @overload
-def is_all_type[T](itr: list[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[list[T]]: ...
+def is_all_type[T](itr: list[Any], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[list[T]]: ...
 
 
 @overload
-def is_all_type[T](itr: set[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[set[T]]: ...
+def is_all_type[T](itr: set[Any], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[set[T]]: ...
 
 
 @overload
-def is_all_type[T](itr: tuple[object, ...], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[tuple[T, ...]]: ...
+def is_all_type[T](itr: tuple[Any, ...], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[tuple[T, ...]]: ...
 
 
 @overload
-def is_all_type[T](itr: frozenset[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[frozenset[T]]: ...
+def is_all_type[T](itr: frozenset[Any], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[frozenset[T]]: ...
 
 
 @overload
-def is_all_type[T](itr: Sequence[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[Sequence[T]]: ...
+def is_all_type[T](itr: Sequence[Any], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[Sequence[T]]: ...
 
 
 @overload
-def is_all_type[T](itr: Collection[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[Collection[T]]: ...
+def is_all_type[T](itr: Collection[Any], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[Collection[T]]: ...
 
 
 def is_all_type[T](
-    itr: Collection[object],
+    itr: Collection[Any],
     expect_type: ExpectType[T],
     use_isinstance: bool = True,
 ) -> TypeGuard[Collection[T]]:
     """渡されたCollectionオブジェクトの中身が全て`expect_type型`であるか判定する。
 
     Args:
-        itr (Collection[object]): 判定対象。
+        itr (Collection[Any]): 判定対象。
         expect_type (ExpectType[T]): 対象型。
         use_isinstance (bool, optional): isinstanceを使って判定するか。 Defaults to True.
 
@@ -256,14 +256,14 @@ def is_dict_value_type[V_in, K, V](
 
 
 def is_type[T](
-    obj: object,
+    obj: Any,
     expect_type: ExpectType[T],
     use_isinstance: bool = True,
 ) -> TypeGuard[T]:
     """渡されたオブジェクトが`expect_type型`であるか判定する。
 
     Args:
-        obj (object): 判定対象。
+        obj (Any): 判定対象。
         expect_type (ExpectType[T]): 対象型。
         use_isinstance (bool, optional): isinstanceを使って判定するか。 Defaults to True.
 
@@ -363,7 +363,7 @@ def load_json(
     file: StrPath,
     encoding: str = "utf-8",
     **kwargs,
-) -> dict[object, object] | list[object]:
+) -> dict[Any, Any] | list[Any]:
     """JSON形式のファイルを読み込む。
 
     Args:
@@ -376,7 +376,7 @@ def load_json(
         FileNotFoundError: `file`が存在しない場合。
 
     Returns:
-        dict[object, object] | list[object]: 読み込まれたJSONデータ。
+        dict[Any, Any] | list[Any]: 読み込まれたJSONデータ。
     """
     path = str_to_path(file)
     if path.exists() and path.is_dir():
@@ -448,7 +448,7 @@ def same_path(p1: StrPath, p2: StrPath) -> bool:
 
 def save_json(
     file: StrPath,
-    data: dict[object, object] | list[object],
+    data: dict[Any, Any] | list[Any],
     encoding: str = "utf-8",
     ensure_ascii: bool = False,
     indent: int | str | None = 4,
@@ -459,7 +459,7 @@ def save_json(
 
     Args:
         file (StrPath): 出力先のファイルパス。
-        data (dict[object, object] | list[object]): 書き出すデータ。
+        data (dict[Any, Any] | list[Any]): 書き出すデータ。
         encoding (str, optional): ファイルのエンコーディング。 Defaults to "utf-8".
         ensure_ascii (bool, optional): json.dump の ensure_ascii 引数。 Defaults to False.
         indent (int | str | None, optional): json.dump の indent 引数。 Defaults to 4.
@@ -557,7 +557,7 @@ def str_to_path(
 
 def write_lines(
     file: StrPath,
-    lines: Iterable[object],
+    lines: Iterable[Any],
     add_blank_line: bool = False,
     encoding: str = "utf-8",
     **kwargs,
@@ -566,7 +566,7 @@ def write_lines(
 
     Args:
         file (StrPath): 出力先のファイルパス。
-        lines (Iterable[object]): 書き出す内容。
+        lines (Iterable[Any]): 書き出す内容。
         add_blank_line (bool, optional): ファイルの末尾を空白行で終わらせるか。 Defaults to False.
         encoding (str, optional): ファイルのエンコーディング。 Defaults to "utf-8".
 
