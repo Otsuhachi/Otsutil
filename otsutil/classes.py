@@ -1,12 +1,6 @@
-"""よく使うクラスを纏めたモジュールです。"""
+"""よく使うクラスを纏めたモジュール。"""
 
-__all__ = (
-    "LockableDict",
-    "LockableList",
-    "ObjectStore",
-    "OtsuNone",
-    "Timer",
-)
+__all__ = ["LockableDict", "LockableList", "ObjectStore", "OtsuNone", "Timer"]
 
 
 import asyncio
@@ -16,6 +10,7 @@ import time
 from collections.abc import AsyncIterator, Callable, Iterator
 from datetime import datetime, timedelta
 from threading import RLock
+from types import TracebackType
 from typing import Any
 
 from .funcs import setup_path
@@ -86,7 +81,12 @@ class LockableDict[K, V](dict[K, V]):
         self._lock.acquire()
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """コンテキストマネージャを終了し、ロックを解放します。"""
         self._lock.release()
 
@@ -134,7 +134,12 @@ class LockableList[V](list[V]):
         self._lock.acquire()
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """コンテキストマネージャを終了し、ロックを解放します。"""
         self._lock.release()
 
@@ -170,7 +175,7 @@ class ObjectStore[T]:
         self._obj: T | None = self.load_file() if self._file.exists() else None
 
     @staticmethod
-    def dumps(obj: Any) -> str:  # noqa: ANN401
+    def dumps(obj: Any) -> str:
         """オブジェクトを base64 エンコードされた pickle 文字列に変換します。
 
         Args:
@@ -183,7 +188,7 @@ class ObjectStore[T]:
         return base64.b64encode(data).decode("utf-8")
 
     @staticmethod
-    def loads(pickle_str: str) -> Any:  # noqa: ANN401
+    def loads(pickle_str: str) -> Any:
         """base64 文字列をオブジェクトに復元します。
 
         Args:
@@ -265,7 +270,7 @@ class Timer:
 
     def __bool__(self) -> bool:
         """タイマーが稼働中（終了時刻に達していない）かどうかを取得します。"""
-        return self.target_time > datetime.now()
+        return self.is_active
 
     def __repr__(self) -> str:
         return f"Timer(delta={self.delta.total_seconds()}s, target={self.target_time})"
@@ -319,9 +324,14 @@ class Timer:
         Args:
             span_seconds (float): 終了判定を行う間隔（秒）。 Defaults to 0.
         """
-        span = max(0.0, span_seconds)
-        while self:
-            time.sleep(span)
+        if span_seconds <= 0:
+            remaining = self.remaining_time.total_seconds()
+            if remaining > 0:
+                time.sleep(remaining)
+            return
+
+        while self.is_active:
+            time.sleep(span_seconds)
 
     async def ajoin(self, span_seconds: float = 0) -> None:
         """終了時刻までイベントループをブロックせずに非同期待機します。
@@ -329,9 +339,14 @@ class Timer:
         Args:
             span_seconds (float): 終了判定を行う間隔（秒）。 Defaults to 0.
         """
-        span = max(0.0, span_seconds)
-        while self:
-            await asyncio.sleep(span)
+        if span_seconds <= 0:
+            remaining = self.remaining_time.total_seconds()
+            if remaining > 0:
+                await asyncio.sleep(remaining)
+            return
+
+        while self.is_active:  # noqa: ASYNC110
+            await asyncio.sleep(span_seconds)
 
     def reset(self) -> None:
         """開始時刻を現在時刻に更新し、タイマーをリセットします。"""
@@ -353,8 +368,8 @@ class Timer:
         Yields:
             Iterator[HMSTuple]: (時, 分, 秒) のタプル。
         """
-        while self:
-            diff = self.target_time - datetime.now()
+        while self.is_active:
+            diff = self.remaining_time
             yield self.calc_hms(max(0, diff.total_seconds()))
 
     def awiggle_begin(self) -> AsyncIterator[HMSTuple]:
@@ -372,8 +387,8 @@ class Timer:
         Yields:
             AsyncIterator[HMSTuple]: (時, 分, 秒) のタプル。
         """
-        while self:
-            diff = self.target_time - datetime.now()
+        while self.is_active:
+            diff = self.remaining_time
             yield self.calc_hms(max(0, diff.total_seconds()))
             await asyncio.sleep(0)  # 他のタスクに制御を譲る
 
@@ -381,6 +396,15 @@ class Timer:
     def delta(self) -> timedelta:
         """設定された時間隔を取得します。"""
         return self._delta
+
+    @property
+    def is_active(self) -> bool:
+        """タイマーが稼働中（終了時刻に達していない）かどうかを取得します。"""
+        return datetime.now() < self._target_time
+
+    @property
+    def remaining_time(self) -> timedelta:
+        return self.target_time - datetime.now()
 
     @property
     def start_time(self) -> datetime:

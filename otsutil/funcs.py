@@ -1,12 +1,14 @@
-"""よく使う関数を纏めたモジュールです。"""
+"""よく使う関数を纏めたモジュール。"""
 
-__all__ = (
+__all__ = [
     "deduplicate",
-    "ensure_relative",
     "get_sub_paths",
-    "get_value",
     "is_all_type",
+    "is_dict_key_type",
+    "is_dict_type",
+    "is_dict_value_type",
     "is_type",
+    "iter_sub_paths",
     "load_json",
     "read_lines",
     "same_path",
@@ -14,17 +16,30 @@ __all__ = (
     "setup_path",
     "str_to_path",
     "write_lines",
-)
+]
 
 
 import fnmatch
 import json
 from collections import deque
-from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
+from collections.abc import Collection, Iterable, Iterator, Sequence
 from pathlib import Path
-from typing import Any, TypeGuard, overload
+from typing import Literal, Never, TypeGuard, overload
 
-from .types import StrPath
+from .exceptions import PathTypeError
+from .types import ExpectType, OptPath, OptStrPath, StrPath
+
+
+@overload
+def deduplicate[T](values: frozenset[T]) -> frozenset[T]: ...  # type: ignore[overload-overlap]
+
+
+@overload
+def deduplicate[T](values: set[T]) -> set[T]: ...
+
+
+@overload
+def deduplicate[T](values: tuple[T, ...]) -> tuple[T, ...]: ...
 
 
 @overload
@@ -32,130 +47,324 @@ def deduplicate[T](values: deque[T]) -> deque[T]: ...
 
 
 @overload
-def deduplicate[T](values: list[T]) -> list[T]: ...
+def deduplicate(values: str) -> Never: ...
 
 
 @overload
-def deduplicate[T](values: tuple[T, ...]) -> tuple[T, ...]: ...
+def deduplicate[T](values: Iterable[T]) -> list[T]: ...
 
 
-def deduplicate[T](values: Sequence[T]) -> Sequence[T]:
-    """シーケンスから重複を取り除きます。
+def deduplicate[T](values: Iterable[T]) -> Iterable[T]:
+    """Iterableから重複を取り除く。
+    文字列は処理できない。
 
-    順番を保持しつつ重複を除去します。
-    元の型(deque, list, tuple)を維持して返します。それ以外は list を返します。
+    `set(values)`と違い順番を保持する。
+    一部の型は元の型を保持し、それ以外の型はlist[T]として返す。
 
     Args:
-        values (Sequence[T]): 重複を取り除きたいシーケンス。
+        values (Iterable[T]): 重複を取り除きたいIterable。
+
+    Raises:
+        TypeError: 文字列が渡された場合。
 
     Returns:
-        Sequence[T]: 重複を除去した、入力と同じ型(またはlist)のシーケンス。
+        Iterable[T]: 重複を除去したIterable。
     """
+    if isinstance(values, str):
+        msg = "文字列から重複を取り除くことはできません。"
+        raise TypeError(msg)
+
     res = list(dict.fromkeys(values))
+
+    if isinstance(values, frozenset):
+        return frozenset(res)
+    if isinstance(values, set):
+        return set(res)
     if isinstance(values, tuple):
         return tuple(res)
     if isinstance(values, deque):
         return deque(res)
+
     return res
 
 
-def get_value[T](
-    data: dict[Any, Any],
-    key: Hashable,
-    type_: type[T],
-    factory: Callable[[], T] | None = None,
-    set_none_on_exception: bool = True,
-) -> T | None:
-    """辞書から値を取得します。値が存在しない場合は生成して登録します。
+def get_sub_paths(
+    root: StrPath,
+    recursive: bool = True,
+    include_exts: Iterable[str] | None = None,
+    include_names: Iterable[str] | None = None,
+    exclude_names: Iterable[str] | None = None,
+    only_file: bool = False,
+    only_dir: bool = False,
+) -> list[Path]:
+    """ディレクトリ内の子パスをフィルタリングして一括取得する。
 
     Args:
-        data (dict[Any, Any]): 取得元の辞書。
-        key (Hashable): 取得するキー。
-        type_ (type[T]): 期待する値の型。
-        factory (Callable[[], T] | None, optional): 値がなかった時の生成用関数。
-            指定がない場合は type_() が呼ばれます。 Defaults to None.
-        set_none_on_exception (bool, optional): 型チェックに通らなかった際、
-            None で辞書を上書きするかどうか。 Defaults to True.
+        root (StrPath): 探索先のルートディレクトリ。
+        recursive (bool, optional): 再帰的に探索するか。 Defaults to True.
+        include_exts (Iterable[str] | None, optional): 抽出する拡張子のリスト。 Defaults to None.
+        include_names (Iterable[str] | None, optional): 抽出する名前のパターン（ワイルドカード可）。 Defaults to None.
+        exclude_names (Iterable[str] | None, optional): 除外する名前のパターン（ワイルドカード可）。 Defaults to None.
+        only_file (bool, optional): ファイルのみを抽出するか。 Defaults to False.
+        only_dir (bool, optional): ディレクトリのみを抽出するか。 Defaults to False.
 
     Raises:
-        TypeError: 取得または生成した値が type_ と一致せず、
-            set_none_on_exception が False の場合に投げられます。
+        ValueError: `only_file`, `only_dir`を両方Trueにした場合。
+        PathTypeError: `root.is_dir()`がFalseの場合。
 
     Returns:
-        T | None: 取得または生成された値。型不一致時は None。
+        list[Path]: 抽出したパス。
     """
-    sentinel = object()
-    res = data.get(key, sentinel)
-    is_defined = res is not sentinel
-    if not is_defined:
-        # キーがない場合のみファクトリを実行
-        f = factory if factory is not None else type_
-        try:
-            res = f()
-        except Exception:
-            res = None
-
-    is_valid = is_type(res, type_, use_isinstance=False) or is_type(
-        res, type_, use_isinstance=True
+    return list(
+        iter_sub_paths(
+            root=root,
+            recursive=recursive,
+            include_exts=include_exts,
+            include_names=include_names,
+            exclude_names=exclude_names,
+            only_file=only_file,
+            only_dir=only_dir,
+        )
     )
-    if not is_valid:
-        if set_none_on_exception:
-            data[key] = None
-            return None
-        msg = f"{key}で取得した値は{type_}型ではありませんでした。({res})"
-        raise TypeError(msg)
-    if not is_defined:
-        data[key] = res
-    return res
+
+
+@overload
+def is_all_type[T](itr: deque[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[deque[T]]: ...
+
+
+@overload
+def is_all_type[T](itr: list[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[list[T]]: ...
+
+
+@overload
+def is_all_type[T](itr: set[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[set[T]]: ...
+
+
+@overload
+def is_all_type[T](itr: tuple[object, ...], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[tuple[T, ...]]: ...
+
+
+@overload
+def is_all_type[T](itr: frozenset[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[frozenset[T]]: ...
+
+
+@overload
+def is_all_type[T](itr: Sequence[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[Sequence[T]]: ...
+
+
+@overload
+def is_all_type[T](itr: Collection[object], expect_type: ExpectType[T], use_isinstance: bool = True) -> TypeGuard[Collection[T]]: ...
 
 
 def is_all_type[T](
-    seq: Sequence[Any],
-    type_: type[T],
-    use_isinstance: bool = False,
-) -> TypeGuard[Sequence[T]]:
-    """シーケンスのすべての要素に対して型判定を行います。
+    itr: Collection[object],
+    expect_type: ExpectType[T],
+    use_isinstance: bool = True,
+) -> TypeGuard[Collection[T]]:
+    """渡されたCollectionオブジェクトの中身が全て`expect_type型`であるか判定する。
 
     Args:
-        seq (Sequence[Any]): 対象のシーケンス。
-        type_ (type[T]): 期待する型。
-        use_isinstance (bool, optional): isinstance を使用して判定するか。
-            False の場合は type(obj) is type_ で判定します。 Defaults to False.
+        itr (Collection[object]): 判定対象。
+        expect_type (ExpectType[T]): 対象型。
+        use_isinstance (bool, optional): isinstanceを使って判定するか。 Defaults to True.
 
     Returns:
-        TypeGuard[Sequence[T]]: すべての要素が指定した型であるかどうかの結果。
+        TypeGuard[Collection[T]]: 判定結果。
     """
-    return all(is_type(x, type_, use_isinstance) for x in seq)
+    return all(
+        is_type(
+            x,
+            expect_type,
+            use_isinstance=use_isinstance,
+        )
+        for x in itr
+    )
+
+
+def is_dict_key_type[K_in, K, V](
+    dic: dict[K_in, V],
+    expect_type: ExpectType[K],
+    use_isinstance: bool = True,
+) -> TypeGuard[dict[K, V]]:
+    """辞書のキーが全て`K型`であるか検証する。
+
+    Args:
+        dic (dict[K_in, V]): 対象の辞書。
+        expect_type (ExpectType[K]): 対象型。
+        use_isinstance (bool): isinstanceを使って判定するか。 defaults to True.
+
+    Returns:
+        TypeGuard[dict[K, V]]: 判定結果。
+    """
+    return is_all_type(
+        dic.keys(),
+        expect_type=expect_type,
+        use_isinstance=use_isinstance,
+    )
+
+
+def is_dict_type[K_in, V_in, K, V](
+    dic: dict[K_in, V_in],
+    expect_type_key: ExpectType[K],
+    expect_type_value: ExpectType[V],
+    use_isinstance_key: bool = True,
+    use_isinstance_value: bool = True,
+) -> TypeGuard[dict[K, V]]:
+    """辞書のキーが全て`K型`かつ、値が全て`V型`であるか検証する。
+
+    Args:
+        dic (dict[K_in, V_in]): 対象の辞書。
+        expect_type_key (ExpectType[K]): キーの対象型。
+        expect_type_value (ExpectType[V]): 値の対象型。
+        use_isinstance_key (bool): キーの検証をisinstanceで行うか。 defaults to True.
+        use_isinstance_value (bool): 値の検証をisinstanceで行うか。 defaults to True.
+
+    Returns:
+        TypeGuard[dict[K, V]]: 判定結果。
+    """
+    return is_dict_key_type(
+        dic,
+        expect_type=expect_type_key,
+        use_isinstance=use_isinstance_key,
+    ) and is_dict_value_type(
+        dic,
+        expect_type=expect_type_value,
+        use_isinstance=use_isinstance_value,
+    )
+
+
+def is_dict_value_type[V_in, K, V](
+    dic: dict[K, V_in],
+    expect_type: ExpectType[V],
+    use_isinstance: bool = True,
+) -> TypeGuard[dict[K, V]]:
+    """辞書の値が全て`V型`であるか検証する。
+
+    Args:
+        dic (dict[K, V_in]): 対象の辞書。
+        expect_type (ExpectType[V]): 対象型。
+        use_isinstance (bool): isinstanceを使って判定するか。 defaults to True.
+
+    Returns:
+        TypeGuard[dict[K, V]]: 判定結果。
+    """
+    return is_all_type(
+        dic.values(),
+        expect_type=expect_type,
+        use_isinstance=use_isinstance,
+    )
 
 
 def is_type[T](
-    obj: Any,  # noqa: ANN401
-    type_: type[T],
-    use_isinstance: bool = False,
+    obj: object,
+    expect_type: ExpectType[T],
+    use_isinstance: bool = True,
 ) -> TypeGuard[T]:
-    """オブジェクトの型判定を行います。
+    """渡されたオブジェクトが`expect_type型`であるか判定する。
 
     Args:
-        obj (Any): 判定対象のオブジェクト。
-        type_ (type[T]): 期待する型。
-        use_isinstance (bool, optional): isinstance を使用して判定するか。
-            False の場合は type(obj) is type_ で判定します。 Defaults to False.
+        obj (object): 判定対象。
+        expect_type (ExpectType[T]): 対象型。
+        use_isinstance (bool, optional): isinstanceを使って判定するか。 Defaults to True.
 
     Returns:
-        TypeGuard[T]: 指定した型であるかどうかの結果。
+        TypeGuard[T]: 判定結果。
     """
-    actual_type = type(None) if type_ is None else type_
+    actual_type = type(None) if expect_type is None else expect_type
     if use_isinstance:
         return isinstance(obj, actual_type)
-    return type(obj) is actual_type
+    return type(obj) in actual_type if isinstance(actual_type, tuple) else type(obj) is actual_type
+
+
+def iter_sub_paths(
+    root: StrPath,
+    recursive: bool = True,
+    include_exts: Iterable[str] | None = None,
+    include_names: Iterable[str] | None = None,
+    exclude_names: Iterable[str] | None = None,
+    only_file: bool = False,
+    only_dir: bool = False,
+) -> Iterator[Path]:
+    """ディレクトリ内の子パスをフィルタリングして順次取得する。
+
+    Args:
+        root (StrPath): 探索先のルートディレクトリ。
+        recursive (bool, optional): 再帰的に探索するか。 Defaults to True.
+        include_exts (Iterable[str] | None, optional): 抽出する拡張子のリスト。 Defaults to None.
+        include_names (Iterable[str] | None, optional): 抽出する名前のパターン（ワイルドカード可）。 Defaults to None.
+        exclude_names (Iterable[str] | None, optional): 除外する名前のパターン（ワイルドカード可）。 Defaults to None.
+        only_file (bool, optional): ファイルのみを抽出するか。 Defaults to False.
+        only_dir (bool, optional): ディレクトリのみを抽出するか。 Defaults to False.
+
+    Raises:
+        ValueError: `only_file`, `only_dir`を両方Trueにした場合。
+        PathTypeError: `root.is_dir()`がFalseの場合。
+
+    Yields:
+        Iterator[Path]: 抽出したパス。
+    """
+    if only_file and only_dir:
+        msg = "`only_file`と`only_dir`は同時に`True`に指定できません。"
+        raise ValueError(msg)
+
+    root_path = str_to_path(root)
+    if not root_path.is_dir():
+        msg = f"{root_path}はディレクトリではないか、存在しません。"
+        raise PathTypeError(msg)
+
+    i_names = set(include_names or [])
+    if include_exts:
+        for ext in include_exts:
+            clean_ext = ext.removeprefix("*").removeprefix(".")
+            i_names.add(f"*.{clean_ext}")
+
+    e_names = set(exclude_names or [])
+
+    def _is_match(path: Path, patterns: set[str]) -> bool:
+        name = path.name
+        return any(fnmatch.fnmatch(name, pat) or path.match(pat) for pat in patterns)
+
+    def _should_include(path: Path) -> bool:
+        if i_names and not _is_match(path, i_names):
+            return False
+
+        return not (e_names and _is_match(path, e_names))
+
+    if not recursive:
+        for p in root_path.iterdir():
+            if only_file and not p.is_file():
+                continue
+            if only_dir and not p.is_dir():
+                continue
+
+            if _should_include(p):
+                yield p
+
+        return
+
+    for dirpath, dirnames, filenames in root_path.walk():
+        if e_names:
+            dirnames[:] = [d for d in dirnames if not _is_match(dirpath / d, e_names)]
+
+        if not only_dir:
+            for fn in filenames:
+                fp = dirpath / fn
+                if _should_include(fp):
+                    yield fp
+
+        if not only_file:
+            for dn in dirnames:
+                dp = dirpath / dn
+                if _should_include(dp):
+                    yield dp
 
 
 def load_json(
     file: StrPath,
     encoding: str = "utf-8",
-    **kwargs: Any,
-) -> dict[Any, Any] | list[Any]:
-    """JSON形式のファイルを読み込みます。
+    **kwargs,
+) -> dict[object, object] | list[object]:
+    """JSON形式のファイルを読み込む。
 
     Args:
         file (StrPath): 読み込むJSONファイルのパス。
@@ -163,15 +372,20 @@ def load_json(
         **kwargs (Any): json.load に渡される追加のキーワード引数。
 
     Raises:
-        FileNotFoundError: 指定されたパスが存在しないか、ファイルでない場合に投げられます。
+        PathTypeError: `file`がディレクトリの場合。
+        FileNotFoundError: `file`が存在しない場合。
 
     Returns:
-        dict[Any, Any] | list[Any]: 読み込まれたJSONデータ。
+        dict[object, object] | list[object]: 読み込まれたJSONデータ。
     """
     path = str_to_path(file)
+    if path.exists() and path.is_dir():
+        msg = f"`{path}`がディレクトリとして存在しています。"
+        raise PathTypeError(msg)
     if not path.is_file():
-        msg = f"{path}は存在しないかファイルではありません。"
+        msg = f"{path}はファイルではありません。"
         raise FileNotFoundError(msg)
+
     with path.open("r", encoding=encoding) as f:
         kwargs["fp"] = f
         return json.load(**kwargs)
@@ -181,74 +395,85 @@ def read_lines(
     file: StrPath,
     ignore_blank_line: bool = False,
     encoding: str = "utf-8",
-    **kwargs: Any,
+    **kwargs,
 ) -> Iterator[str]:
-    """ファイルを読み込み、1行ずつ返すイテレータを生成します。
+    """ファイルを読み込み、1行ずつ返すイテレータを生成する。
 
-    各行の右端にある改行コードは自動的に除去されます。
+    各行の右端にある改行コードは自動的に除去される。
 
     Args:
         file (StrPath): 読み込むファイルのパス。
-        ignore_blank_line (bool, optional): 空白行（stripして空になる行）を無視するかどうか。
-            Defaults to False.
+        ignore_blank_line (bool, optional): 空白行（stripして空になる行）を無視するか。 Defaults to False.
         encoding (str, optional): ファイルのエンコーディング。 Defaults to "utf-8".
-        **kwargs (Any): Path.open に渡される追加のキーワード引数。modeは 'r' 固定です。
+        **kwargs (Any): `Path.open`に渡される追加のキーワード引数。`mode`は`r`固定です。
 
     Raises:
-        FileNotFoundError: 指定されたパスが存在しないか、ファイルでない場合に投げられます。
+        PathTypeError: `file`がディレクトリの場合。
+        FileNotFoundError: `file`が存在しない場合。
 
     Yields:
-        Iterator[str]: ファイルの各行の内容。
+        Iterator[str]: 各行。
     """
     path = str_to_path(file)
+    if path.exists() and path.is_dir():
+        msg = f"`{path}`がディレクトリとして存在しています。"
+        raise PathTypeError(msg)
     if not path.is_file():
-        msg = f"{path}は存在しないかファイルではありません。"
+        msg = f"{path}はファイルではありません。"
         raise FileNotFoundError(msg)
+
     kwargs["encoding"] = encoding
-    if "file" in kwargs:
-        del kwargs["file"]
-    kwargs["mode"] = "r"
-    with path.open(**kwargs) as f:
-        gen = map(lambda x: x.rstrip("\n"), f)
+    kwargs.pop("file", None)
+    kwargs.pop("mode", None)
+
+    with path.open("r", **kwargs) as f:
+        gen = (x.rstrip("\n") for x in f)
         if ignore_blank_line:
-            gen = filter(lambda x: x.strip(), gen)
+            gen = filter(str.strip, gen)
         yield from gen
 
 
 def same_path(p1: StrPath, p2: StrPath) -> bool:
-    """2つのパスが実体として同一かどうかを判定します。
+    """2つのパスが実体として同一か判定する。
 
     Args:
         p1 (StrPath): 比較するパス1。
         p2 (StrPath): 比較するパス2。
 
     Returns:
-        bool: 同一のパスであれば True、そうでなければ False。
+        bool: 判定結果。
     """
-    return str_to_path(p1).resolve() == str_to_path(p2).resolve()
+    return str_to_path(p1, resolve=True) == str_to_path(p2, resolve=True)
 
 
 def save_json(
     file: StrPath,
-    data: dict[Any, Any] | list[Any],
+    data: dict[object, object] | list[object],
     encoding: str = "utf-8",
     ensure_ascii: bool = False,
     indent: int | str | None = 4,
     sort_keys: bool = True,
-    **kwargs: Any,
+    **kwargs,
 ) -> None:
-    """指定したファイルにデータをJSON形式で書き出します。
+    """指定したファイルにデータをJSON形式で書き出す。
 
     Args:
         file (StrPath): 出力先のファイルパス。
-        data (dict[Any, Any] | list[Any]): 書き出すデータ。
+        data (dict[object, object] | list[object]): 書き出すデータ。
         encoding (str, optional): ファイルのエンコーディング。 Defaults to "utf-8".
         ensure_ascii (bool, optional): json.dump の ensure_ascii 引数。 Defaults to False.
         indent (int | str | None, optional): json.dump の indent 引数。 Defaults to 4.
         sort_keys (bool, optional): json.dump の sort_keys 引数。 Defaults to True.
         **kwargs (Any): json.dump に渡される追加のキーワード引数。
+
+    Raises:
+        PathTypeError: `file`がディレクトリの場合。
     """
     path = setup_path(file)
+    if path.exists() and path.is_dir():
+        msg = f"`{path}`がディレクトリとして存在しています。"
+        raise PathTypeError(msg)
+
     with path.open("w", encoding=encoding) as f:
         kwargs["fp"] = f
         kwargs["obj"] = data
@@ -258,149 +483,110 @@ def save_json(
         json.dump(**kwargs)
 
 
-def ensure_relative(path: StrPath, base: StrPath) -> Path:
-    """パスを基準ディレクトリからの相対パスに変換します。
+@overload
+def setup_path(path: StrPath, is_dir: bool = False, resolve: bool | Literal["strict"] = False) -> Path: ...
 
-    絶対パスが渡された場合、基準ディレクトリからの相対パスに解決します。
-    既に相対パスである場合はそのまま Path オブジェクトとして返します。
-    基準ディレクトリの外にある絶対パスが渡された場合、解決不能として ValueError を投げることがあります。
+
+@overload
+def setup_path(path: OptPath, is_dir: bool = False, resolve: bool | Literal["strict"] = False) -> OptPath: ...
+
+
+@overload
+def setup_path(path: OptStrPath, is_dir: bool = False, resolve: bool | Literal["strict"] = False) -> OptPath: ...
+
+
+def setup_path(
+    path: OptStrPath,
+    is_dir: bool = False,
+    resolve: bool | Literal["strict"] = False,
+) -> OptPath:
+    """親ディレクトリの存在を保証し、Pathオブジェクトを返します。Noneを渡した場合はNoneを返す。
 
     Args:
-        path (StrPath): 変換対象のパス。
-        base (StrPath): 基準となるディレクトリのパス。
+        path (OptStrPath): セットアップしたいパス。
+        is_dir (bool, optional): 指定したパス自体をディレクトリとして作成するか。 Defaults to False.
+        resolve (bool | Literal[&quot;strict&quot;], optional): `Path.resolve`をするか。 Defaults to False.
 
     Returns:
-        Path: 相対パス化された Path オブジェクト。
+        OptPath: セットアップされたパス。
     """
-    p = str_to_path(path)
-    if not p.is_absolute():
+    p = str_to_path(path=path, resolve=resolve)
+    if p is None:
         return p
-    return p.relative_to(str_to_path(base).resolve())
 
-
-def get_sub_paths(
-    root: StrPath,
-    recursive: bool = True,
-    include_exts: list[str] | None = None,
-    include_names: list[str] | None = None,
-    exclude_names: list[str] | None = None,
-    only_file: bool = False,
-    only_dir: bool = False,
-) -> list[Path]:
-    """ディレクトリ内の子パスをフィルタリングして一括取得します。
-
-    Args:
-        root (StrPath): 探索先のルートディレクトリ。
-        recursive (bool, optional): 再帰的に探索するかどうか。 Defaults to True.
-        include_exts (list[str] | None, optional): 抽出する拡張子のリスト（例: [".py"]）。
-            内部的には include_names のショートカットとして機能します。 Defaults to None.
-        include_names (list[str] | None, optional): 抽出する名前のパターン（ワイルドカード可）。 Defaults to None.
-        exclude_names (list[str] | None, optional): 除外する名前のパターン（ワイルドカード可）。 Defaults to None.
-        only_file (bool, optional): ファイルのみを抽出するか。 Defaults to False.
-        only_dir (bool, optional): ディレクトリのみを抽出するか。 Defaults to False.
-
-    Returns:
-        list[Path]: 抽出されたパスのリスト。
-
-    Raises:
-        NotADirectoryError: 指定された root がディレクトリでない場合に投げられます。
-    """
-    root_path = str_to_path(root)
-    if not root_path.is_dir():
-        msg = f"{root_path}はディレクトリではないか、存在しません。"
-        raise NotADirectoryError(msg)
-
-    pattern = "**/*" if recursive else "*"
-    all_paths = root_path.glob(pattern)
-
-    # フィルタロジックの構築と正規化
-    i_names = set(include_names or [])
-    if include_exts:
-        for ext in include_exts:
-            # ".txt", "txt", "*.txt" をすべて "*.txt" に正規化
-            clean_ext = ext.removeprefix("*").removeprefix(".")
-            i_names.add(f"*.{clean_ext}")
-
-    e_names = set(exclude_names or [])
-
-    res = []
-    for p in all_paths:
-        if only_file and not p.is_file():
-            continue
-        if only_dir and not p.is_dir():
-            continue
-
-        name = p.name
-        # 包含フィルタ（一つでも一致すれば通過）
-        if i_names and not any(fnmatch.fnmatch(name, pat) for pat in i_names):
-            continue
-        # 除外フィルタ（一つでも一致すれば脱落）
-        # 包含フィルタを通過した後でも、除外にヒットすれば追加されません。
-        if e_names and any(fnmatch.fnmatch(name, pat) for pat in e_names):
-            continue
-
-        res.append(p)
-
-    return res
-
-
-def setup_path(path: StrPath, is_dir: bool = False) -> Path:
-    """親ディレクトリの存在を保証し、Pathオブジェクトを返します。
-
-    Args:
-        path (StrPath): セットアップしたいパス。
-        is_dir (bool, optional): 指定したパス自体をディレクトリとして作成するかどうか。
-            False の場合はその親ディレクトリを作成します。 Defaults to False.
-
-    Returns:
-        Path: セットアップされたPathオブジェクト。
-    """
-    p = str_to_path(path)
     target = p if is_dir else p.parent
     if not target.exists():
         target.mkdir(parents=True)
+
     return p
 
 
-def str_to_path(path: StrPath) -> Path:
-    """パス（文字列またはPath）をPathオブジェクトに変換します。
+@overload
+def str_to_path(path: StrPath, resolve: bool | Literal["strict"] = False) -> Path: ...
+
+
+@overload
+def str_to_path(path: OptPath, resolve: bool | Literal["strict"] = False) -> OptPath: ...
+
+
+@overload
+def str_to_path(path: OptStrPath, resolve: bool | Literal["strict"] = False) -> OptPath: ...
+
+
+def str_to_path(
+    path: OptStrPath,
+    resolve: bool | Literal["strict"] = False,
+) -> OptPath:
+    """パスを取得する。Noneを渡した場合はNoneを返す。
 
     Args:
-        path (StrPath): 変換対象のパス。
+        path (OptStrPath): パス。
+        resolve (bool | Literal[&quot;strict&quot;], optional): `Path.resolve`をするか。 Defaults to False.
 
     Returns:
-        Path: Pathオブジェクト。
+        OptPath: パスまたはNone。
     """
-    return path if isinstance(path, Path) else Path(path)
+    if path is None:
+        return path
+    if isinstance(path, str):
+        path = Path(path)
+    if resolve is False:
+        return path
+    return path.resolve(strict=True) if resolve == "strict" else path.resolve()
 
 
 def write_lines(
     file: StrPath,
-    lines: Iterable[Any],
+    lines: Iterable[object],
     add_blank_line: bool = False,
     encoding: str = "utf-8",
-    **kwargs: Any,
+    **kwargs,
 ) -> None:
-    """ファイルにIterableの各要素を1行ずつ書き出します。
+    """ファイルにIterableの各要素を1行ずつ書き出す。
 
     Args:
         file (StrPath): 出力先のファイルパス。
-        lines (Iterable[Any]): 書き出す内容のイテラブル。各要素は str に変換されます。
-        add_blank_line (bool, optional): ファイルの末尾を空白行で終わらせるかどうか。
-            Defaults to False.
+        lines (Iterable[object]): 書き出す内容。
+        add_blank_line (bool, optional): ファイルの末尾を空白行で終わらせるか。 Defaults to False.
         encoding (str, optional): ファイルのエンコーディング。 Defaults to "utf-8".
-        **kwargs (Any): Path.open に渡される追加のキーワード引数。modeは 'w' 固定です。
+
+    Raises:
+        PathTypeError: `file`がディレクトリの場合。
     """
     path = setup_path(file)
+    if path.exists() and path.is_dir():
+        msg = f"`{path}`がディレクトリとして存在しています。"
+        raise PathTypeError(msg)
     kwargs["encoding"] = encoding
-    kwargs["mode"] = "w"
+    kwargs.pop("mode", None)
     kwargs.pop("file", None)
-    with path.open(**kwargs) as f:
+    with path.open(mode="w", **kwargs) as f:
         last_line = ""
-        for i, line in enumerate(map(str, lines)):
+        for i, line in enumerate([x if isinstance(x, str) else str(x) for x in lines]):
             if i > 0:
                 f.write("\n")
             f.write(line)
             last_line = line
+
         if add_blank_line and last_line.strip():
             f.write("\n")

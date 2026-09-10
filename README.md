@@ -22,9 +22,21 @@
 
 | モジュール名 | 概要 |
 | :---: | :--- |
+| [cfg](#cfgモジュール) | 定数 |
 | [classes](#classesモジュール) | スレッドセーフなコンテナやタイマーなどのクラス定義 |
+| [exceptions](#exceptionsモジュール) | 例外 |
 | [funcs](#funcsモジュール) | ファイル操作や型判定などの便利な関数定義 |
 | [types](#typesモジュール) | パッケージ全体で共通利用する型ヒント・ジェネリクス共通定義 |
+
+---
+
+### cfgモジュール
+
+cfgモジュールでは以下の定数が定義されています。
+
+| 定数名 | 概要 |
+| :--: |:--- |
+| **JST** | 日本のタイムゾーン。 |
 
 ---
 
@@ -42,6 +54,16 @@ classesモジュールでは以下のクラスが定義されています。
 
 ---
 
+### exceptionsモジュール
+
+exceptionsモジュールでは以下の定数が定義されています。
+
+| 例外名 | 概要 |
+| PathError | パスに関連するエラー |
+| PathTypeError | パスの形式に関連するエラー |
+
+---
+
 ### funcsモジュール
 
 funcsモジュールでは以下の関数が定義されています。
@@ -49,11 +71,13 @@ funcsモジュールでは以下の関数が定義されています。
 | 関数名 | 概要 |
 | :---: | :--- |
 | **deduplicate** | シーケンスから重複を取り除き、順序を保持したまま元の型（`list`/`tuple`）で返す。 |
-| **ensure_relative** | パスを基準ディレクトリからの相対パスに確実に正規化する。環境依存の絶対パスを排除する際に有用。 |
 | **get_sub_paths** | ディレクトリ内を探索し、ワイルドカードや拡張子による高度なフィルタリングを適用して子パスを一覧取得する。 |
-| **get_value** | 階層構造を持つ辞書などから、キーのリストを指定して安全に値を取得する。 |
 | **is_all_type** | 反復可能オブジェクトの全ての要素が、指定した型であるか判定する。 |
+| **is_dict_key_type** | `dict[K, Any]`か検証する。 |
+| **is_dict_type** | `dict[K, V]`か検証する。 |
+| **is_dict_value_type** | `dict[K, V]`か検証する。 |
 | **is_type** | オブジェクトが指定した型であるか判定する（`None` 許容判定などを含む）。 |
+| **iter_sub_paths** | `get_sub_paths`のイテレータ版。 |
 | **load_json** | `JSON` ファイルを読み込む。親ディレクトリがない場合は作成し、ファイルがない場合はデフォルト値を返します。 |
 | **read_lines** | ファイルを1行ずつ読み出すジェネレータ。改行コードの自動除去やエンコーディング指定が可能です。 |
 | **same_path** | 2つのパスが（相対/絶対に関わらず）物理的に同じ場所を指しているか判定する。 |
@@ -68,12 +92,11 @@ funcsモジュールでは以下の関数が定義されています。
 
 typesモジュールでは、Python 3.12 のジェネリクス構文に対応した以下の型定義がされています。
 
-| 名称 | 形式 | 概要 |
-| :---: | :---: | :--- |
-| **FloatInt** | TypeAlias | `float` または `int` に限定した数値型。 |
-| **K / V** | TypeVar | 辞書のキー(Key)や値(Value)を想定した型変数。 |
-| **P** | ParamSpec | 関数の引数仕様（Parameter Specification）を表す型変数。 |
-| **R** | TypeVar | 関数の戻り値（Return Value）を表す型変数。 |
-| **T** | TypeVar | 制約のない汎用的な型変数。 |
-| **HMSTuple** | Alias | `(時, 分, 秒)` のタプル。型は `(int, int, float)`。 |
-| **StrPath** | Alias | `pathlib.Path` または `str`。 |
+| 名称 | 概要 |
+| :---: | :--- |
+| **ExpectType[T]** | `isinstance(obj, ExpectType)`で使用できる型。 |
+| **FloatInt** | `float` または `int` に限定した数値型。 |
+| **HMSTuple** | `(時, 分, 秒)` のタプル。型は `(int, int, float)`。 |
+| **OptPath** | `pathlib.Path` または`None` |
+| **OptStrPath** | `pathlib.Path`または`str`または`None` |
+| **StrPath** | `pathlib.Path` または `str`。 |

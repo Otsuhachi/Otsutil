@@ -1,29 +1,20 @@
-"""よく使う型ヒントや定義を纏めたモジュールです。"""
+"""よく使う型ヒントや定義を纏めたモジュール。"""
 
-__all__ = (
+__all__ = [
+    "ExpectType",
     "FloatInt",
-    "K",
-    "P",
-    "R",
-    "T",
-    "V",
     "HMSTuple",
+    "OptPath",
+    "OptStrPath",
     "StrPath",
-)
+]
 
 
-from pathlib import Path
-from typing import ParamSpec, TypeVar
+import pathlib
 
-# タイプエイリアス
-type HMSTuple = tuple[int, int, float]
-type StrPath = Path | str
-
-# ジェネリクス
+type ExpectType[T] = type[T] | tuple[type[T], ...]
 type FloatInt = float | int
-
-P = ParamSpec("P")
-R = TypeVar("R")
-K = TypeVar("K")
-V = TypeVar("V")
-T = TypeVar("T")
+type HMSTuple = tuple[int, int, float]
+type OptPath = pathlib.Path | None
+type OptStrPath = pathlib.Path | str | None
+type StrPath = pathlib.Path | str
