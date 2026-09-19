@@ -5,14 +5,16 @@ __all__ = ["LockableDict", "LockableList", "ObjectStore", "OtsuNone", "Timer"]
 
 import asyncio
 import base64
+import contextlib
 import pickle
 import time
 from collections.abc import AsyncIterator, Callable, Iterator
 from datetime import datetime, timedelta
 from threading import RLock
 from types import TracebackType
-from typing import Any
+from typing import Any, TypeGuard
 
+from .exceptions import PathTypeError
 from .funcs import setup_path
 from .types import HMSTuple, StrPath
 
@@ -153,49 +155,57 @@ class LockableList[V](list[V]):
         return wrapper
 
 
-class ObjectStore[T]:
-    """オブジェクトを pickle 化してファイルに保存・管理するクラス。
+class ObjectStore[T = Any]:
+    """オブジェクトを`pickle`化してファイルに保存・管理するクラス。
 
-    特殊な変換が必要なクラスを保存する場合は、対象のクラスで `__reduce__`
-    メソッドを実装することで、リスト内の要素などを含め自動的にカスタム
-    シリアライズが適用されます。
+    特殊な変換が必要なクラスを保存する場合は、対象のクラスで`__reduce__`メソッドを実装することで、リスト内の要素などを含め自動的にカスタムシリアライズが適用される。
 
     Attributes:
-        _file (Path): 保存先のファイルパス。
-        _obj (T | None): 現在メモリ上に保持されているオブジェクト。
+        obj (T | None): 保存されたオブジェクト。
     """
 
-    def __init__(self, file: StrPath) -> None:
-        """ObjectStore を初期化します。
+    def __init__(
+        self,
+        file: StrPath,
+        validator: Callable[[object], TypeGuard[T]] | None = None,
+    ) -> None:
+        """ObjectStoreを初期化する。
 
         Args:
-            file (StrPath): 保存先のファイルパス。
+            file (StrPath): 保存先ファイルパス。
+            validator (Callable[[object], TypeGuard[T]] | None, optional): オブジェクトの検証関数。 Defaults to None.
         """
-        self._file = setup_path(file)
+        self._file = file = setup_path(file)
+
+        if file.is_dir():
+            msg = f"`{file}`はディレクトリとして存在しています。"
+            raise PathTypeError(msg)
+
+        self._validator = validator
         self._obj: T | None = self.load_file() if self._file.exists() else None
 
     @staticmethod
-    def dumps(obj: Any) -> str:
-        """オブジェクトを base64 エンコードされた pickle 文字列に変換します。
+    def dumps(obj: object) -> str:
+        """オブジェクトを`base64`エンコードされた`pickle`文字列に変換する。
 
         Args:
-            obj (Any): 変換対象のオブジェクト。
+            obj (object): 変換対象オブジェクト。
 
         Returns:
-            str: base64 エンコードされた文字列。
+            str: `base64`エンコードされた文字列。
         """
         data = pickle.dumps(obj, protocol=4)
         return base64.b64encode(data).decode("utf-8")
 
     @staticmethod
     def loads(pickle_str: str) -> Any:
-        """base64 文字列をオブジェクトに復元します。
+        """`base64`文字列をオブジェクトに復元する。
 
         Args:
-            pickle_str (str): 復元対象の base64 文字列。
+            pickle_str (str): 復元対象の`base64`文字列。
 
         Returns:
-            Any: 復元されたオブジェクト。文字列が空の場合は None。
+            Any: 復元されたオブジェクト。文字列が空の場合は`None`。
         """
         if not pickle_str:
             return None
@@ -203,38 +213,47 @@ class ObjectStore[T]:
         return pickle.loads(data)
 
     def load_file(self) -> T | None:
-        """ファイルからオブジェクトを読み込みます。
+        """ファイルからオブジェクトを読み込む。
+
+        インスタンス実行時にも自動的に実行される。
+
+        Raises:
+            TypeError: 検証に失敗した場合。
 
         Returns:
-            T | None: 読み込まれたオブジェクト。ファイルが存在しない場合は None。
+            T | None: 読み込んだオブジェクト。
         """
         if self._file.exists():
             with self._file.open("r", encoding="utf-8") as f:
-                return self.loads(f.read())
-        self.save_file(None)
+                raw_obj = self.loads(f.read())
+                if raw_obj is not None and (validator := self._validator) is not None and not validator(raw_obj):
+                    msg = f"`{self._file}`のデータは検証関数を通過しませんでした（type: {type(raw_obj)}）。"
+                    raise TypeError(msg)
+                return raw_obj
         return None
 
     def save_file(self, obj: T | None) -> bool:
-        """オブジェクトをシリアライズしてファイルに保存します。
+        """オブジェクトをシリアライズしてファイルに保存する。
 
         Args:
             obj (T | None): 保存するオブジェクト。
 
         Returns:
-            bool: 保存に成功した場合は True、失敗した場合は False。
+            bool: 保存に成功した場合は`True`、失敗した場合は`False`。
         """
-        try:
+        with contextlib.suppress(Exception):
+            if obj is not None and (validator := self._validator) is not None and not validator(obj):
+                raise TypeError
             content = self.dumps(obj)
             with self._file.open("w", encoding="utf-8") as f:
                 f.write(content)
             self._obj = obj
             return True
-        except Exception:
-            return False
+        return False
 
     @property
     def obj(self) -> T | None:
-        """現在保持されているオブジェクトを取得します。"""
+        """保存されているオブジェクト。"""
         return self._obj
 
 
