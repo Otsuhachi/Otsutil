@@ -21,20 +21,20 @@ if version is None:
 setup(
     name="otsutil",
     version=version,
-    description="A general-purpose utility package using Python 3.12+ features.",
+    description="A general-purpose utility package using Python 3.13+ features.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Otsuhachi",
     author_email="agequodagis.tufuiegoeris@gmail.com",
     license="MIT License",
-    python_requires=">=3.12",
+    python_requires=">=3.13",
     packages=find_packages(where=".", include=["otsutil*"]),
     package_data={
         "otsutil": ["py.typed"],
     },
     install_requires=[],
     classifiers=[
-        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
