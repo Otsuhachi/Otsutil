@@ -80,7 +80,7 @@ funcsモジュールでは以下の関数が定義されています。
 | **iter_sub_paths** | `get_sub_paths`のイテレータ版。 |
 | **load_json** | `JSON` ファイルを読み込む。親ディレクトリがない場合は作成し、ファイルがない場合はデフォルト値を返します。 |
 | **read_lines** | ファイルを1行ずつ読み出すジェネレータ。改行コードの自動除去やエンコーディング指定が可能です。 |
-| **same_path** | 2つのパスが（相対/絶対に関わらず）物理的に同じ場所を指しているか判定する。 |
+| **same_path** | パス群が（相対/絶対に関わらず）物理的に同じ場所を指しているか判定する。 |
 | **save_json** | オブジェクトを `JSON` 形式で保存する。 |
 | **setup_path** | パスを `Path` オブジェクトとして整備し、必要に応じて親ディレクトリを生成して利用可能な状態にする。 |
 | **str_to_path** | 文字列を `pathlib.Path` に変換する。 |
@@ -98,5 +98,6 @@ typesモジュールでは、Python 3.12 のジェネリクス構文に対応し
 | **FloatInt** | `float` または `int` に限定した数値型。 |
 | **HMSTuple** | `(時, 分, 秒)` のタプル。型は `(int, int, float)`。 |
 | **OptPath** | `pathlib.Path` または`None` |
-| **OptStrPath** | `pathlib.Path`または`str`または`None` |
+| **OptStr** | `str` または`None`。 |
+| **OptStrPath** | `pathlib.Path`または`str`または`None`。 |
 | **StrPath** | `pathlib.Path` または `str`。 |

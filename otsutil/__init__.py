@@ -5,6 +5,9 @@ otsutil - 汎用的なユーティリティパッケージ
 スレッドセーフなコレクション、タイマーなどの便利なツールを提供する。
 """
 
+__VERSION__ = "1.3.3.312"
+
+
 __all__ = [
     "JST",
     "__VERSION__",
@@ -15,6 +18,7 @@ __all__ = [
     "LockableList",
     "ObjectStore",
     "OptPath",
+    "OptStr",
     "OptStrPath",
     "OtsuNone",
     "PathError",
@@ -39,8 +43,6 @@ __all__ = [
 ]
 
 
-__VERSION__ = "1.3.2.312"
-
 from .cfg import JST
 from .classes import LockableDict, LockableList, ObjectStore, OtsuNone, Timer
 from .exceptions import PathError, PathTypeError
@@ -61,4 +63,4 @@ from .funcs import (
     str_to_path,
     write_lines,
 )
-from .types import ExpectType, FloatInt, HMSTuple, OptPath, OptStrPath, StrPath
+from .types import ExpectType, FloatInt, HMSTuple, OptPath, OptStr, OptStrPath, StrPath

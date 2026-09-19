@@ -359,24 +359,53 @@ def iter_sub_paths(
                     yield dp
 
 
+@overload
+def load_json[T](
+    file: StrPath,
+    encoding: str = "utf-8",
+    expect_type: ExpectType[T] = (dict, list),
+    **kwargs,
+) -> T: ...
+
+
+@overload
 def load_json(
     file: StrPath,
     encoding: str = "utf-8",
+    expect_type: None = None,
     **kwargs,
-) -> dict[Any, Any] | list[Any]:
+) -> Any: ...
+
+
+@overload
+def load_json[T](
+    file: StrPath,
+    encoding: str = "utf-8",
+    expect_type: ExpectType[T] | None = None,
+    **kwargs,
+) -> T | Any: ...
+
+
+def load_json[T](
+    file: StrPath,
+    encoding: str = "utf-8",
+    expect_type: ExpectType[T] | None = None,
+    **kwargs,
+) -> T | Any:
     """JSON形式のファイルを読み込む。
 
     Args:
-        file (StrPath): 読み込むJSONファイルのパス。
+        file (StrPath): 読み込むJSONファイル。
         encoding (str, optional): ファイルのエンコーディング。 Defaults to "utf-8".
-        **kwargs (Any): json.load に渡される追加のキーワード引数。
+        expect_type (ExpectType[T] | None, optional): 期待する型。 Defaults to None.
 
     Raises:
         PathTypeError: `file`がディレクトリの場合。
         FileNotFoundError: `file`が存在しない場合。
+        TypeError: isinstance(data, `expect_type`)が`False`になる場合。
 
     Returns:
-        dict[Any, Any] | list[Any]: 読み込まれたJSONデータ。
+        T | Any: expect_type型と一致するjsonデータ。またはjsonデータ。
     """
     path = str_to_path(file)
     if path.exists() and path.is_dir():
@@ -388,7 +417,12 @@ def load_json(
 
     with path.open("r", encoding=encoding) as f:
         kwargs["fp"] = f
-        return json.load(**kwargs)
+        data = json.load(**kwargs)
+    if expect_type is not None and not isinstance(data, expect_type):
+        msg = f"`{path}`のデータは期待する型と一致しません（期待する型: {expect_type}, type: {type(data)}）。"
+        raise TypeError(msg)
+
+    return data
 
 
 def read_lines(
@@ -433,22 +467,33 @@ def read_lines(
         yield from gen
 
 
-def same_path(p1: StrPath, p2: StrPath) -> bool:
-    """2つのパスが実体として同一か判定する。
+def same_path(
+    *paths: StrPath,
+    allow_missing: bool = True,
+) -> bool:
+    """`paths`が実体として同一か判定する。
 
     Args:
-        p1 (StrPath): 比較するパス1。
-        p2 (StrPath): 比較するパス2。
+        *paths (StrPath): 比較するパス群。
+        allow_missing (bool, optional): `paths`の要素数が2未満の場合を許容するか。 Defaults to True.
 
     Returns:
         bool: 判定結果。
     """
-    return str_to_path(p1, resolve=True) == str_to_path(p2, resolve=True)
+    if (length := len(paths)) < 2:
+        if allow_missing:
+            return True
+        msg = f"pathsの要素数が2未満です（要素数: {length}）。"
+        raise ValueError(msg)
+
+    p1, *items = (str_to_path(p, resolve=True) for p in paths)
+
+    return all(p1 == path for path in items)
 
 
 def save_json(
     file: StrPath,
-    data: dict[Any, Any] | list[Any],
+    data: Any,
     encoding: str = "utf-8",
     ensure_ascii: bool = False,
     indent: int | str | None = 4,
@@ -459,7 +504,7 @@ def save_json(
 
     Args:
         file (StrPath): 出力先のファイルパス。
-        data (dict[Any, Any] | list[Any]): 書き出すデータ。
+        data (Any): 書き出すデータ。
         encoding (str, optional): ファイルのエンコーディング。 Defaults to "utf-8".
         ensure_ascii (bool, optional): json.dump の ensure_ascii 引数。 Defaults to False.
         indent (int | str | None, optional): json.dump の indent 引数。 Defaults to 4.
