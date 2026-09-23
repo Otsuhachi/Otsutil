@@ -10,6 +10,7 @@ __VERSION__ = "1.3.4.313"
 
 __all__ = [
     "JST",
+    "PD_OTSU_APP",
     "__VERSION__",
     "ExpectType",
     "FloatInt",
@@ -43,7 +44,7 @@ __all__ = [
 ]
 
 
-from .cfg import JST
+from .cfg import JST, PD_OTSU_APP
 from .classes import LockableDict, LockableList, ObjectStore, OtsuNone, Timer
 from .exceptions import PathError, PathTypeError
 from .funcs import (
