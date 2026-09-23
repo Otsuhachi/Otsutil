@@ -5,7 +5,6 @@ __all__ = ["LockableDict", "LockableList", "ObjectStore", "OtsuNone", "Timer"]
 
 import asyncio
 import base64
-import contextlib
 import pickle
 import time
 from collections.abc import AsyncIterator, Callable, Iterator
@@ -168,12 +167,14 @@ class ObjectStore[T = Any]:
         self,
         file: StrPath,
         validator: Callable[[object], TypeGuard[T]] | None = None,
+        allow_validation_failure: bool = False,
     ) -> None:
         """ObjectStoreを初期化する。
 
         Args:
             file (StrPath): 保存先ファイルパス。
             validator (Callable[[object], TypeGuard[T]] | None, optional): オブジェクトの検証関数。 Defaults to None.
+            allow_validation_failure (bool, optional): validatorがインスタンス生成時に失敗した場合、`self.obj=None`として初期化することを許容するか。
         """
         self._file = file = setup_path(file)
 
@@ -182,7 +183,12 @@ class ObjectStore[T = Any]:
             raise PathTypeError(msg)
 
         self._validator = validator
-        self._obj: T | None = self.load_file() if self._file.exists() else None
+        try:
+            self._obj: T | None = self.load_file()
+        except TypeError:
+            if not allow_validation_failure:
+                raise
+            self._obj = None
 
     @staticmethod
     def dumps(obj: object) -> str:
@@ -241,15 +247,16 @@ class ObjectStore[T = Any]:
         Returns:
             bool: 保存に成功した場合は`True`、失敗した場合は`False`。
         """
-        with contextlib.suppress(Exception):
-            if obj is not None and (validator := self._validator) is not None and not validator(obj):
-                raise TypeError
+        if obj is not None and (validator := self._validator) is not None and not validator(obj):
+            return False
+        try:
             content = self.dumps(obj)
             with self._file.open("w", encoding="utf-8") as f:
                 f.write(content)
             self._obj = obj
             return True
-        return False
+        except Exception:
+            return False
 
     @property
     def obj(self) -> T | None:
