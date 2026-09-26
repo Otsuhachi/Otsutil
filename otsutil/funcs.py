@@ -312,17 +312,24 @@ def iter_sub_paths(
         msg = f"{root_path}はディレクトリではないか、存在しません。"
         raise PathTypeError(msg)
 
-    i_names = set(include_names or [])
-    if include_exts:
-        for ext in include_exts:
-            clean_ext = ext.removeprefix("*").removeprefix(".")
-            i_names.add(f"*.{clean_ext}")
+    def _normalize_itr(val: str | Iterable[str] | None) -> list[str]:
+        if val is None:
+            return []
+        return [val] if isinstance(val, str) else list(val)
 
-    e_names = set(exclude_names or [])
+    i_names = {pat for pat in _normalize_itr(include_names) if pat}
+    if include_exts:
+        for ext in _normalize_itr(include_exts):
+            clean_ext = ext.removeprefix("*").removeprefix(".")
+            if clean_ext:
+                i_names.add(f"*.{clean_ext}")
+    e_names = {pat for pat in _normalize_itr(exclude_names) if pat}
 
     def _is_match(path: Path, patterns: set[str]) -> bool:
+        """パス名または相対パスが指定されたパターンのいずれかにマッチするか判定する。"""
         name = path.name
-        return any(fnmatch.fnmatch(name, pat) or path.match(pat) for pat in patterns)
+        rel_path = str(path.relative_to(root_path))
+        return any(fnmatch.fnmatch(name, pat) or fnmatch.fnmatch(rel_path, pat) or path.match(pat) for pat in patterns)
 
     def _should_include(path: Path) -> bool:
         if i_names and not _is_match(path, i_names):
