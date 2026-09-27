@@ -7,7 +7,7 @@ import asyncio
 import base64
 import pickle
 import time
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterable, Iterator
 from datetime import datetime, timedelta
 from threading import RLock
 from types import TracebackType
@@ -79,7 +79,7 @@ class LockableDict[K, V](dict[K, V]):
     def __iter__(self) -> Iterator[K]:
         """反復可能オブジェクトを返します（スレッドセーフ）。"""
         with self._lock:
-            return super().__iter__()
+            return iter(list(super().__iter__()))
 
     def __len__(self) -> int:
         """要素数を取得します（スレッドセーフ）。"""
@@ -183,12 +183,23 @@ class LockableList[V](list[V]):
     def __iter__(self) -> Iterator[V]:
         """反復可能オブジェクトを返します（スレッドセーフ）。"""
         with self._lock:
-            return super().__iter__()
+            return iter(list(super().__iter__()))
 
     def __len__(self) -> int:
         """要素数を取得します（スレッドセーフ）。"""
         with self._lock:
             return super().__len__()
+
+    @overload
+    def __setitem__(self, key: SupportsIndex, value: V) -> None: ...
+
+    @overload
+    def __setitem__(self, key: slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], value: Iterable[V]) -> None: ...
+
+    def __setitem__(
+        self, key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], value: V | Iterable[V]
+    ) -> None:
+        return super().__setitem__(key, value)  # type: ignore
 
     def _with_lock[**P, R](self, f: Callable[P, R]) -> Callable[P, R]:
         """メソッドをロックでラップします。"""
