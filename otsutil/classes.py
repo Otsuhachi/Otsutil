@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator, Callable, Iterator
 from datetime import datetime, timedelta
 from threading import RLock
 from types import TracebackType
-from typing import Any
+from typing import Any, SupportsIndex, overload
 
 from .funcs import setup_path
 from .types import HMSTuple, StrPath
@@ -61,6 +61,11 @@ class LockableDict[K, V](dict[K, V]):
             if (original_method := getattr(self, attr, None)) is not None:
                 setattr(self, attr, self._with_lock(original_method))
 
+    def __contains__(self, key: object) -> bool:
+        """指定した値が含まれているか判定します（スレッドセーフ）。"""
+        with self._lock:
+            return super().__contains__(key)
+
     def __delitem__(self, key: K) -> None:
         """指定したキーの要素を削除します（スレッドセーフ）。"""
         with self._lock:
@@ -70,6 +75,16 @@ class LockableDict[K, V](dict[K, V]):
         """指定したキーの要素を取得します（スレッドセーフ）。"""
         with self._lock:
             return super().__getitem__(key)
+
+    def __iter__(self) -> Iterator[K]:
+        """反復可能オブジェクトを返します（スレッドセーフ）。"""
+        with self._lock:
+            return super().__iter__()
+
+    def __len__(self) -> int:
+        """要素数を取得します（スレッドセーフ）。"""
+        with self._lock:
+            return super().__len__()
 
     def __setitem__(self, key: K, value: V) -> None:
         """指定したキーに値を設定します（スレッドセーフ）。"""
@@ -143,6 +158,38 @@ class LockableList[V](list[V]):
         """コンテキストマネージャを終了し、ロックを解放します。"""
         self._lock.release()
 
+    def __contains__(self, key: object) -> bool:
+        """指定した値が含まれているか判定します（スレッドセーフ）。"""
+        with self._lock:
+            return super().__contains__(key)
+
+    def __delitem__(self, key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None]) -> None:
+        """指定したキーの要素を削除します（スレッドセーフ）。"""
+        with self._lock:
+            return super().__delitem__(key)
+
+    @overload
+    def __getitem__(self, i: SupportsIndex, /) -> V: ...
+
+    @overload
+    def __getitem__(self, s: slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> "LockableList[V]": ...
+
+    def __getitem__(self, item: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> Any:
+        """指定したキーの要素を取得します（スレッドセーフ）。"""
+        with self._lock:
+            res = super().__getitem__(item)
+            return LockableList[V](res) if isinstance(item, slice) else res
+
+    def __iter__(self) -> Iterator[V]:
+        """反復可能オブジェクトを返します（スレッドセーフ）。"""
+        with self._lock:
+            return super().__iter__()
+
+    def __len__(self) -> int:
+        """要素数を取得します（スレッドセーフ）。"""
+        with self._lock:
+            return super().__len__()
+
     def _with_lock[**P, R](self, f: Callable[P, R]) -> Callable[P, R]:
         """メソッドをロックでラップします。"""
 
@@ -184,7 +231,7 @@ class ObjectStore[T]:
         Returns:
             str: base64 エンコードされた文字列。
         """
-        data = pickle.dumps(obj, protocol=4)
+        data = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
         return base64.b64encode(data).decode("utf-8")
 
     @staticmethod
