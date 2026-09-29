@@ -1,0 +1,5 @@
+{
+  "ruff.configuration": {
+    "target-version": "py312"
+  }
+}

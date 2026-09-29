@@ -1,20 +1,26 @@
-"""よく使うクラスを纏めたモジュール。"""
-
-__all__ = ["LockableDict", "LockableList", "ObjectStore", "OtsuNone", "Timer"]
-
+from __future__ import annotations
 
 import asyncio
 import base64
 import pickle
 import time
-from collections.abc import AsyncIterator, Callable, Iterable, Iterator
 from datetime import datetime, timedelta
 from threading import RLock
-from types import TracebackType
-from typing import Any, SupportsIndex, overload
+from typing import TYPE_CHECKING, Any, SupportsIndex, overload
 
 from .funcs import setup_path
-from .types import HMSTuple, StrPath
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Callable, Iterable, Iterator
+    from types import TracebackType
+
+    from .types import HMSTuple, StrPath
+
+
+"""よく使うクラスを纏めたモジュール。"""
+
+
+__all__ = ["LockableDict", "LockableList", "ObjectStore", "OtsuNone", "Timer"]
 
 
 class __OtsuNoneType:
@@ -91,7 +97,7 @@ class LockableDict[K, V](dict[K, V]):
         with self._lock:
             return super().__setitem__(key, value)
 
-    def __enter__(self) -> "LockableDict[K, V]":
+    def __enter__(self) -> LockableDict[K, V]:
         """コンテキストマネージャを開始し、ロックを取得します。"""
         self._lock.acquire()
         return self
@@ -144,7 +150,7 @@ class LockableList[V](list[V]):
             if (original_method := getattr(self, attr, None)) is not None:
                 setattr(self, attr, self._with_lock(original_method))
 
-    def __enter__(self) -> "LockableList[V]":
+    def __enter__(self) -> LockableList[V]:
         """コンテキストマネージャを開始し、ロックを取得します。"""
         self._lock.acquire()
         return self
@@ -172,7 +178,7 @@ class LockableList[V](list[V]):
     def __getitem__(self, i: SupportsIndex, /) -> V: ...
 
     @overload
-    def __getitem__(self, s: slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> "LockableList[V]": ...
+    def __getitem__(self, s: slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> LockableList[V]: ...
 
     def __getitem__(self, item: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> Any:
         """指定したキーの要素を取得します（スレッドセーフ）。"""

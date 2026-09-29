@@ -1,3 +1,13 @@
+import fnmatch
+import json
+from collections import deque
+from collections.abc import Collection, Iterable, Iterator, Sequence
+from pathlib import Path
+from typing import Any, Literal, Never, TypeGuard, overload
+
+from .exceptions import PathTypeError
+from .types import ExpectType, OptPath, OptStrPath, StrPath
+
 """よく使う関数を纏めたモジュール。"""
 
 __all__ = [
@@ -17,17 +27,6 @@ __all__ = [
     "str_to_path",
     "write_lines",
 ]
-
-
-import fnmatch
-import json
-from collections import deque
-from collections.abc import Collection, Iterable, Iterator, Sequence
-from pathlib import Path
-from typing import Any, Literal, Never, TypeGuard, overload
-
-from .exceptions import PathTypeError
-from .types import ExpectType, OptPath, OptStrPath, StrPath
 
 
 @overload

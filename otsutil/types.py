@@ -1,3 +1,5 @@
+import pathlib
+
 """よく使う型ヒントや定義を纏めたモジュール。"""
 
 __all__ = [
@@ -10,8 +12,6 @@ __all__ = [
     "StrPath",
 ]
 
-
-import pathlib
 
 type ExpectType[T] = type[T] | tuple[type[T], ...]
 type FloatInt = float | int

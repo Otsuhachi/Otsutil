@@ -1,3 +1,25 @@
+from .cfg import JST, PD_OTSU_APP
+from .classes import LockableDict, LockableList, ObjectStore, OtsuNone, Timer
+from .exceptions import PathError, PathTypeError
+from .funcs import (
+    deduplicate,
+    get_sub_paths,
+    is_all_type,
+    is_dict_key_type,
+    is_dict_type,
+    is_dict_value_type,
+    is_type,
+    iter_sub_paths,
+    load_json,
+    read_lines,
+    same_path,
+    save_json,
+    setup_path,
+    str_to_path,
+    write_lines,
+)
+from .types import ExpectType, FloatInt, HMSTuple, OptPath, OptStr, OptStrPath, StrPath
+
 """
 otsutil - 汎用的なユーティリティパッケージ
 
@@ -5,7 +27,7 @@ otsutil - 汎用的なユーティリティパッケージ
 スレッドセーフなコレクション、タイマーなどの便利なツールを提供する。
 """
 
-__VERSION__ = "1.3.8.312"
+__VERSION__ = "1.3.9.312"
 
 
 __all__ = [
@@ -42,26 +64,3 @@ __all__ = [
     "str_to_path",
     "write_lines",
 ]
-
-
-from .cfg import JST, PD_OTSU_APP
-from .classes import LockableDict, LockableList, ObjectStore, OtsuNone, Timer
-from .exceptions import PathError, PathTypeError
-from .funcs import (
-    deduplicate,
-    get_sub_paths,
-    is_all_type,
-    is_dict_key_type,
-    is_dict_type,
-    is_dict_value_type,
-    is_type,
-    iter_sub_paths,
-    load_json,
-    read_lines,
-    same_path,
-    save_json,
-    setup_path,
-    str_to_path,
-    write_lines,
-)
-from .types import ExpectType, FloatInt, HMSTuple, OptPath, OptStr, OptStrPath, StrPath
