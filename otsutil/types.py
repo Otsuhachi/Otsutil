@@ -1,3 +1,4 @@
+import os
 import pathlib
 
 """よく使う型ヒントや定義を纏めたモジュール。"""
@@ -18,5 +19,5 @@ type FloatInt = float | int
 type HMSTuple = tuple[int, int, float]
 type OptPath = pathlib.Path | None
 type OptStr = str | None
-type OptStrPath = pathlib.Path | str | None
-type StrPath = pathlib.Path | str
+type OptStrPath = pathlib.Path | str | os.PathLike[str] | None
+type StrPath = pathlib.Path | str | os.PathLike[str]
