@@ -638,7 +638,7 @@ class Timer:
     @property
     def is_active(self) -> bool:
         """タイマーが稼働中（終了時刻に達していない）かどうかを取得する。"""
-        return datetime.now() < self._target_time
+        return self.remaining_seconds > 0
 
     @property
     def remaining_seconds(self) -> float:
@@ -648,7 +648,7 @@ class Timer:
 
     @property
     def remaining_time(self) -> timedelta:
-        return self.target_time - datetime.now()
+        return timedelta(seconds=self.remaining_seconds)
 
     @property
     def start_time(self) -> datetime:
