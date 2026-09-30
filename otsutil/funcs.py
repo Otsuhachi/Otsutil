@@ -203,16 +203,16 @@ def is_dict_key_type[K_in, K, V](
 
 
 def is_dict_type[K_in, V_in, K, V](
-    dic: dict[K_in, V_in],
+    dic: object | dict[K_in, V_in],
     expect_type_key: ExpectType[K],
     expect_type_value: ExpectType[V],
     use_isinstance_key: bool = True,
     use_isinstance_value: bool = True,
 ) -> TypeGuard[dict[K, V]]:
-    """辞書のキーが全て`K型`かつ、値が全て`V型`であるか検証する。
+    """辞書型かつ、辞書のキーが全て`K型`かつ、値が全て`V型`であるか検証する。
 
     Args:
-        dic (dict[K_in, V_in]): 対象の辞書。
+        dic (dict[K_in, V_in]): 対象のオブジェクト。
         expect_type_key (ExpectType[K]): キーの対象型。
         expect_type_value (ExpectType[V]): 値の対象型。
         use_isinstance_key (bool): キーの検証をisinstanceで行うか。 defaults to True.
@@ -221,14 +221,18 @@ def is_dict_type[K_in, V_in, K, V](
     Returns:
         TypeGuard[dict[K, V]]: 判定結果。
     """
-    return is_dict_key_type(
-        dic,
-        expect_type=expect_type_key,
-        use_isinstance=use_isinstance_key,
-    ) and is_dict_value_type(
-        dic,
-        expect_type=expect_type_value,
-        use_isinstance=use_isinstance_value,
+    return (
+        isinstance(dic, dict)
+        and is_dict_key_type(
+            dic,
+            expect_type=expect_type_key,
+            use_isinstance=use_isinstance_key,
+        )
+        and is_dict_value_type(
+            dic,
+            expect_type=expect_type_value,
+            use_isinstance=use_isinstance_value,
+        )
     )
 
 
@@ -535,15 +539,27 @@ def save_json(
 
 
 @overload
-def setup_path(path: StrPath, is_dir: bool = False, resolve: bool | Literal["strict"] = False) -> Path: ...
+def setup_path(
+    path: StrPath,
+    is_dir: bool = False,
+    resolve: bool | Literal["strict"] = False,
+) -> Path: ...
 
 
 @overload
-def setup_path(path: OptPath, is_dir: bool = False, resolve: bool | Literal["strict"] = False) -> OptPath: ...
+def setup_path(
+    path: OptPath,
+    is_dir: bool = False,
+    resolve: bool | Literal["strict"] = False,
+) -> OptPath: ...
 
 
 @overload
-def setup_path(path: OptStrPath, is_dir: bool = False, resolve: bool | Literal["strict"] = False) -> OptPath: ...
+def setup_path(
+    path: OptStrPath,
+    is_dir: bool = False,
+    resolve: bool | Literal["strict"] = False,
+) -> OptPath: ...
 
 
 def setup_path(
@@ -573,15 +589,24 @@ def setup_path(
 
 
 @overload
-def str_to_path(path: StrPath, resolve: bool | Literal["strict"] = False) -> Path: ...
+def str_to_path(
+    path: StrPath,
+    resolve: bool | Literal["strict"] = False,
+) -> Path: ...
 
 
 @overload
-def str_to_path(path: OptPath, resolve: bool | Literal["strict"] = False) -> OptPath: ...
+def str_to_path(
+    path: OptPath,
+    resolve: bool | Literal["strict"] = False,
+) -> OptPath: ...
 
 
 @overload
-def str_to_path(path: OptStrPath, resolve: bool | Literal["strict"] = False) -> OptPath: ...
+def str_to_path(
+    path: OptStrPath,
+    resolve: bool | Literal["strict"] = False,
+) -> OptPath: ...
 
 
 def str_to_path(
@@ -599,7 +624,7 @@ def str_to_path(
     """
     if path is None:
         return path
-    if isinstance(path, str):
+    if not isinstance(path, Path):
         path = Path(path)
     if resolve is False:
         return path

@@ -12,3 +12,4 @@ python_version = "3.12"
 
 [scripts]
 reset = "pwsh -Command Remove-Item .venv -Force -Recurse | pipenv update -d"
+test = "pwsh -Command pipenv run py -m unittest discover -s tests -p \"test_*.py\" -v"

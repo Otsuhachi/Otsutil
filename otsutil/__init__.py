@@ -1,5 +1,12 @@
-from .cfg import JST, PD_OTSU_APP
-from .classes import LockableDict, LockableList, ObjectStore, OtsuNone, Timer
+from .cfg import JST
+from .classes import (
+    LockableDict,
+    LockableList,
+    ObjectStore,
+    OtsuNone,
+    OtsuNoneType,
+    Timer,
+)
 from .exceptions import PathError, PathTypeError
 from .funcs import (
     deduplicate,
@@ -27,12 +34,11 @@ otsutil - 汎用的なユーティリティパッケージ
 スレッドセーフなコレクション、タイマーなどの便利なツールを提供する。
 """
 
-__VERSION__ = "1.3.9.312"
+__VERSION__ = "1.3.10.312"
 
 
 __all__ = [
     "JST",
-    "PD_OTSU_APP",
     "__VERSION__",
     "ExpectType",
     "FloatInt",
@@ -44,6 +50,7 @@ __all__ = [
     "OptStr",
     "OptStrPath",
     "OtsuNone",
+    "OtsuNoneType",
     "PathError",
     "PathTypeError",
     "StrPath",
