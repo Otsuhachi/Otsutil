@@ -436,6 +436,8 @@ class ObjectStore[T = Any]:
             try:
                 with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
                     f.write(content)
+                    f.flush()
+                    os.fsync(f.fileno())
                 pf_tmp.replace(self._file)
                 self._obj = obj
                 return True
@@ -544,6 +546,7 @@ class Timer:
                 time.sleep(rem)
             return
 
+        span_seconds = max(span_seconds, 0.001)
         while self.is_active:
             rem = self.remaining_seconds
             if rem <= 0:
@@ -562,6 +565,7 @@ class Timer:
                 await asyncio.sleep(rem)
             return
 
+        span_seconds = max(span_seconds, 0.001)
         while self.is_active:
             rem = self.remaining_seconds
             if rem <= 0:
@@ -595,6 +599,8 @@ class Timer:
         Yields:
             Iterator[HMSTuple]: (時, 分, 秒) のタプル。
         """
+        interval_seconds = max(interval_seconds, 0.001)
+
         while self.is_active:
             rem = self.remaining_seconds
             yield self.calc_hms(rem)
@@ -623,6 +629,8 @@ class Timer:
         Yields:
             AsyncIterator[HMSTuple]: (時, 分, 秒) のタプル。
         """
+        interval_seconds = max(interval_seconds, 0.001)
+
         while self.is_active:
             rem = self.remaining_seconds
             yield self.calc_hms(rem)

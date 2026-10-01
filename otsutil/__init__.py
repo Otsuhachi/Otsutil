@@ -7,7 +7,7 @@ from .classes import (
     OtsuNoneType,
     Timer,
 )
-from .exceptions import PathError, PathTypeError
+from .exceptions import ObjectStoreError, ObjectStoreLoadError, ObjectStoreSaveError, PathError, PathTypeError
 from .funcs import (
     deduplicate,
     get_sub_paths,
@@ -34,18 +34,20 @@ otsutil - 汎用的なユーティリティパッケージ
 スレッドセーフなコレクション、タイマーなどの便利なツールを提供する。
 """
 
-__VERSION__ = "1.3.11.313"
+__version__ = "1.3.12.313"
 
 
 __all__ = [
     "JST",
-    "__VERSION__",
     "ExpectType",
     "FloatInt",
     "HMSTuple",
     "LockableDict",
     "LockableList",
     "ObjectStore",
+    "ObjectStoreError",
+    "ObjectStoreLoadError",
+    "ObjectStoreSaveError",
     "OptPath",
     "OptStr",
     "OptStrPath",
@@ -55,6 +57,7 @@ __all__ = [
     "PathTypeError",
     "StrPath",
     "Timer",
+    "__version__",
     "deduplicate",
     "get_sub_paths",
     "is_all_type",

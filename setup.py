@@ -9,7 +9,7 @@ long_description = (pd_this / "README.md").read_text(encoding="utf-8")
 version = None
 with (pd_this / "otsutil/__init__.py").open("r", encoding="utf-8") as f:
     for line in (x.rstrip("\n") for x in f):
-        if (find := re.fullmatch(r'^__VERSION__ = "([^"]+)"', line)) is None:
+        if (find := re.fullmatch(r'^__version__ = "([^"]+)"', line)) is None:
             continue
 
         version = find.groups()[0].strip()
