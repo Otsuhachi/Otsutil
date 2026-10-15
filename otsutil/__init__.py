@@ -1,3 +1,5 @@
+import logging
+
 from .cfg import JST
 from .classes import (
     LockableDict,
@@ -34,7 +36,7 @@ otsutil - 汎用的なユーティリティパッケージ
 スレッドセーフなコレクション、タイマーなどの便利なツールを提供する。
 """
 
-__version__ = "1.3.12.312"
+__version__ = "1.3.13.312"
 
 
 __all__ = [
@@ -74,3 +76,6 @@ __all__ = [
     "str_to_path",
     "write_lines",
 ]
+
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import logging
 import os
 import pickle
 import tempfile
@@ -31,6 +32,9 @@ __all__ = [
     "OtsuNoneType",
     "Timer",
 ]
+
+
+logger = logging.getLogger(__name__)
 
 
 class OtsuNoneType:
@@ -330,45 +334,34 @@ class ObjectStore[T]:
     def __init__(
         self,
         file: StrPath,
-        validator: Callable[[object], TypeGuard[T]] | Callable[[object], bool] | None = None,
-        allow_validation_failure: bool = True,
+        validator: Callable[[object], TypeGuard[T]] | None = None,
+        allow_validation_failure: bool = False,
     ) -> None:
-        """ObjectStore を初期化します。
+        """ObjectStoreを初期化する。
 
         Args:
-            file (StrPath): 保存先のファイルパス。
-            validator (Callable[[object], TypeGuard[T]] | Callable[[object], bool] | None, optional):
-                ロード・保存時にオブジェクトの型や内容を検証する関数。
-            allow_validation_failure (bool, optional):
-                True の場合、ロード時の検証失敗時に TypeError を投げず None に設定します。
-                デフォルトは True。
+            file (StrPath): 保存先ファイルパス。
+            validator (Callable[[object], TypeGuard[T]] | None, optional): オブジェクトの検証関数。 Defaults to None.
+            allow_validation_failure (bool, optional): validatorがインスタンス生成時に失敗した場合、`self.obj=None`として初期化することを許容するか。
 
         Raises:
-            PathTypeError: 指定されたパスがディレクトリである場合。
-            TypeError: ロードデータが検証関数を通過せず allow_validation_failure が False の場合。
+            PathTypeError: 指定されたパスがディレクトリとして存在する場合。
+            TypeError: 自動読み込み時の検証に失敗し、allow_validation_failure が False の場合。
+            ObjectStoreLoadError: ファイル読み込みまたは復元に失敗した場合。
         """
-        pf = setup_path(file)
-        if pf is None:
-            msg = "ファイルパスの指定が必要です。"
-            raise PathTypeError(msg)
+        self._file = file = setup_path(file)
 
-        if pf.exists() and pf.is_dir():
-            msg = f"`{pf}` はディレクトリです。ファイルパスを指定してください。"
-            raise PathTypeError(msg)
+        if file.is_dir():
+            logger.error(f"`{file}`はディレクトリとして存在しています。")
+            raise PathTypeError("ディレクトリとして存在するパスを指定することはできません。")
 
-        self._file: Path = pf
         self._validator = validator
-        self._allow_validation_failure = allow_validation_failure
-        self._obj: T | None = None
-
-        if self._file.exists():
-            raw_obj = self.load_file()
-            if raw_obj is not None and (validator := self._validator) is not None and not validator(raw_obj):
-                if not allow_validation_failure:
-                    msg = f"`{self._file}`のデータは検証関数を通過しませんでした（type: {type(raw_obj)}）。"
-                    raise TypeError(msg)
-                raw_obj = None
-            self._obj = raw_obj
+        try:
+            self._obj: T | None = self.load_file()
+        except TypeError:
+            if not allow_validation_failure:
+                raise
+            self._obj = None
 
     @staticmethod
     def dumps(obj: Any) -> str:
@@ -413,8 +406,20 @@ class ObjectStore[T]:
         """
         if not self._file.exists():
             return None
-        content = self._file.read_text(encoding="utf-8")
-        return self.loads(content)
+
+        try:
+            with self._file.open("r", encoding="utf-8") as f:
+                content = f.read()
+            raw_obj = self.loads(content)
+        except Exception as ex:
+            logger.error(f"`{self._file}`からのデータ読み込み・復元に失敗しました。")
+            raise ObjectStoreLoadError("ファイルからのデータ読み込み・復元に失敗しました。") from ex
+
+        if raw_obj is not None and (validator := self._validator) is not None and not validator(raw_obj):
+            logger.error(f"`{self._file}`のデータは検証関数を通過しませんでした（type: {type(raw_obj)}）。")
+            raise TypeError(f"読み込んだデータは検証関数を通過しませんでした。（type: {type(raw_obj)}）")
+
+        return raw_obj
 
     def save_file(self, obj: T | None) -> bool:
         """オブジェクトをシリアライズしてアトミックにファイルに保存します。
@@ -476,8 +481,8 @@ class Timer:
         """
         delta = timedelta(hours=hours, minutes=minutes, seconds=seconds)
         if delta < timedelta(0):
-            msg = f"0秒未満のタイマーは作成できません: {delta.total_seconds()}s"
-            raise ValueError(msg)
+            logger.error(f"0秒未満のタイマーは作成できません（{delta.total_seconds()}s）。")
+            raise ValueError("0秒未満のタイマーは作成できません。")
         self._delta = delta
         self.reset()
 
