@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import logging
 import os
 import pickle
 import tempfile
@@ -31,6 +32,9 @@ __all__ = [
     "OtsuNoneType",
     "Timer",
 ]
+
+
+logger = logging.getLogger(__name__)
 
 
 class OtsuNoneType:
@@ -348,8 +352,8 @@ class ObjectStore[T = Any]:
         self._file = file = setup_path(file)
 
         if file.is_dir():
-            msg = f"`{file}`はディレクトリとして存在しています。"
-            raise PathTypeError(msg)
+            logger.error(f"`{file}`はディレクトリとして存在しています。")
+            raise PathTypeError("ディレクトリとして存在するパスを指定することはできません。")
 
         self._validator = validator
         try:
@@ -407,12 +411,12 @@ class ObjectStore[T = Any]:
                 content = f.read()
             raw_obj = self.loads(content)
         except Exception as ex:
-            msg = f"`{self._file}`からのデータ読み込み・復元に失敗しました。"
-            raise ObjectStoreLoadError(msg) from ex
+            logger.error(f"`{self._file}`からのデータ読み込み・復元に失敗しました。")
+            raise ObjectStoreLoadError("ファイルからのデータ読み込み・復元に失敗しました。") from ex
 
         if raw_obj is not None and (validator := self._validator) is not None and not validator(raw_obj):
-            msg = f"`{self._file}`のデータは検証関数を通過しませんでした（type: {type(raw_obj)}）。"
-            raise TypeError(msg)
+            logger.error(f"`{self._file}`のデータは検証関数を通過しませんでした（type: {type(raw_obj)}）。")
+            raise TypeError(f"読み込んだデータは検証関数を通過しませんでした。（type: {type(raw_obj)}）")
 
         return raw_obj
 
@@ -479,8 +483,8 @@ class Timer:
         """
         delta = timedelta(hours=hours, minutes=minutes, seconds=seconds)
         if delta < timedelta(0):
-            msg = f"0秒未満のタイマーは作成できません: {delta.total_seconds()}s"
-            raise ValueError(msg)
+            logger.error(f"0秒未満のタイマーは作成できません（{delta.total_seconds()}s）。")
+            raise ValueError("0秒未満のタイマーは作成できません。")
         self._delta = delta
         self.reset()
 

@@ -1,5 +1,6 @@
 import fnmatch
 import json
+import logging
 from collections import deque
 from collections.abc import Collection, Iterable, Iterator, Sequence
 from pathlib import Path
@@ -27,6 +28,9 @@ __all__ = [
     "str_to_path",
     "write_lines",
 ]
+
+
+logger = logging.getLogger(__name__)
 
 
 @overload
@@ -71,6 +75,7 @@ def deduplicate[T](values: Iterable[T]) -> Iterable[T]:
     """
     if isinstance(values, str):
         msg = "文字列から重複を取り除くことはできません。"
+        logger.error(msg)
         raise TypeError(msg)
 
     res = list(dict.fromkeys(values))
@@ -308,12 +313,14 @@ def iter_sub_paths(
     """
     if only_file and only_dir:
         msg = "`only_file`と`only_dir`は同時に`True`に指定できません。"
+        logger.error(msg)
         raise ValueError(msg)
 
     root_path = str_to_path(root)
     if not root_path.is_dir():
-        msg = f"{root_path}はディレクトリではないか、存在しません。"
-        raise PathTypeError(msg)
+        status = "ディレクトリではありません" if root_path.exists() else "存在しません"
+        logger.error(f"`{root_path}`は{status}。")
+        raise PathTypeError(f"指定されたパスは{status}。")
 
     def _normalize_itr(val: str | Iterable[str] | None) -> list[str]:
         if val is None:
@@ -418,19 +425,17 @@ def load_json[T](
         T | Any: expect_type型と一致するjsonデータ。またはjsonデータ。
     """
     path = str_to_path(file)
-    if path.exists() and path.is_dir():
-        msg = f"`{path}`がディレクトリとして存在しています。"
-        raise PathTypeError(msg)
-    if not path.is_file():
-        msg = f"{path}はファイルではありません。"
-        raise FileNotFoundError(msg)
+    status = "ディレクトリとして存在しています" if path.is_dir() else "ファイルではありません" if (path.exists() and not path.is_file()) else None
+    if status is not None:
+        logger.error(f"`{path}`は{status}。")
+        raise PathTypeError(f"指定されたパスは{status}。")
 
     with path.open("r", encoding=encoding) as f:
         kwargs["fp"] = f
         data = json.load(**kwargs)
     if expect_type is not None and not isinstance(data, expect_type):
-        msg = f"`{path}`のデータは期待する型と一致しません（期待する型: {expect_type}, type: {type(data)}）。"
-        raise TypeError(msg)
+        logger.error(f"`{path}`のデータは期待する型と一致しません（期待する型: {expect_type}, type: {type(data)}）。")
+        raise TypeError(f"読み込んだデータは期待する型と一致しません（期待する型: {expect_type}, type: {type(data)}）。")
 
     return data
 
@@ -459,12 +464,10 @@ def read_lines(
         Iterator[str]: 各行。
     """
     path = str_to_path(file)
-    if path.exists() and path.is_dir():
-        msg = f"`{path}`がディレクトリとして存在しています。"
-        raise PathTypeError(msg)
-    if not path.is_file():
-        msg = f"{path}はファイルではありません。"
-        raise FileNotFoundError(msg)
+    status = "ディレクトリとして存在しています" if path.is_dir() else "ファイルではありません" if (path.exists() and not path.is_file()) else None
+    if status is not None:
+        logger.error(f"`{path}`は{status}。")
+        raise PathTypeError(f"指定されたパスは{status}。")
 
     kwargs["encoding"] = encoding
     kwargs.pop("file", None)
@@ -494,6 +497,7 @@ def same_path(
         if allow_missing:
             return True
         msg = f"pathsの要素数が2未満です（要素数: {length}）。"
+        logger.error(msg)
         raise ValueError(msg)
 
     p1, *items = (str_to_path(p, resolve=True) for p in paths)
@@ -525,9 +529,10 @@ def save_json(
         PathTypeError: `file`がディレクトリの場合。
     """
     path = setup_path(file)
-    if path.exists() and path.is_dir():
-        msg = f"`{path}`がディレクトリとして存在しています。"
-        raise PathTypeError(msg)
+    status = "ディレクトリとして存在しています" if path.is_dir() else "ファイルではありません" if (path.exists() and not path.is_file()) else None
+    if status is not None:
+        logger.error(f"`{path}`は{status}。")
+        raise PathTypeError(f"指定されたパスは{status}。")
 
     with path.open("w", encoding=encoding) as f:
         kwargs["fp"] = f
@@ -650,9 +655,11 @@ def write_lines(
         PathTypeError: `file`がディレクトリの場合。
     """
     path = setup_path(file)
-    if path.exists() and path.is_dir():
-        msg = f"`{path}`がディレクトリとして存在しています。"
-        raise PathTypeError(msg)
+    status = "ディレクトリとして存在しています" if path.is_dir() else "ファイルではありません" if (path.exists() and not path.is_file()) else None
+    if status is not None:
+        logger.error(f"`{path}`は{status}。")
+        raise PathTypeError(f"指定されたパスは{status}。")
+
     kwargs["encoding"] = encoding
     kwargs.pop("mode", None)
     kwargs.pop("file", None)
